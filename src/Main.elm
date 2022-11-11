@@ -6,12 +6,13 @@ import Html exposing (Html, button, div, img, text)
 import Html.Attributes exposing (src, style)
 import Html.Events exposing (onClick)
 import Http
+import Identifiers
 import Task
 import VitePluginHelper
 
 
 type alias Model =
-    Maybe ( String, String )
+    Maybe String
 
 
 main : Program () Model Msg
@@ -26,39 +27,24 @@ main =
 
 type Msg
     = GenerateId
-    | IdGenerated (Result Http.Error ( String, String ))
-    | ShortIdGenerated String
+    | IdGenerated String
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         GenerateId ->
-            ( model, Task.perform ShortIdGenerated IdentifiersSpec.generateShortId )
+            ( model, Task.perform IdGenerated Identifiers.generateNotebookId )
 
-        IdGenerated result ->
-            ( case result of
-                Err _ ->
-                    model
+        IdGenerated id ->
+            ( Just id, Cmd.none )
 
-                Ok ( a, b ) ->
-                    Just ( a, b )
-            , Cmd.none
-            )
-
-        ShortIdGenerated a -> (Just (a, a), Cmd.none)
 
 
 view : Model -> Html Msg
 view maybeId =
     let
-        notebookId =
-            case maybeId of
-                Nothing ->
-                    "loading..."
-
-                Just ( a, b ) ->
-                    a ++ "-" ++ b
+        notebookId = Maybe.withDefault "Generate an ID!" maybeId
     in
     div []
         [ img [ src <| VitePluginHelper.asset "/src/assets/logo.png?inline", style "width" "200px" ] []
