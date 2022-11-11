@@ -6,7 +6,6 @@ import Html exposing (Html, button, div, img, text)
 import Html.Attributes exposing (src, style)
 import Html.Events exposing (onClick)
 import Http
-import Identifiers
 import Task
 import VitePluginHelper
 
@@ -28,13 +27,14 @@ main =
 type Msg
     = GenerateId
     | IdGenerated (Result Http.Error ( String, String ))
+    | ShortIdGenerated String
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         GenerateId ->
-            ( model, Task.attempt IdGenerated Identifiers.requestTwoWords )
+            ( model, Task.perform ShortIdGenerated IdentifiersSpec.generateShortId )
 
         IdGenerated result ->
             ( case result of
@@ -45,6 +45,8 @@ update msg model =
                     Just ( a, b )
             , Cmd.none
             )
+
+        ShortIdGenerated a -> (Just (a, a), Cmd.none)
 
 
 view : Model -> Html Msg
