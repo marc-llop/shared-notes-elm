@@ -29,11 +29,18 @@ body {
   display: flex;
   flex-direction: column;
   gap: 20px;
-  width: 50%;
+  width: 70%;
   max-width: 800px;
-  min-width: 230px;
-  margin: 20px 0;
+  min-width: 500px;
+  margin: 0 16px;
   align-items: center;
+}
+
+@media (max-width: 500px) {
+  .notebook {
+    width: 100%;
+    margin: 0 8px;
+  }
 }
 
 .title {
@@ -41,6 +48,13 @@ body {
   background: linear-gradient(var(--color-text), 65%, var(--color-action));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  white-space: nowrap;
+}
+
+@media (max-width: 300px) {
+  .title {
+    font-size: 24px;
+  }
 }
 
 .notebookId {
