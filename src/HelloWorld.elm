@@ -5,8 +5,8 @@ import Html.Attributes exposing (href)
 import Html.Events exposing (onClick)
 
 
-helloWorld : Int -> Html msg
-helloWorld model =
+helloWorld : Html msg
+helloWorld =
     div []
         [ h1 [] [ text "Hello, Vite + Elm!" ]
         , p []
