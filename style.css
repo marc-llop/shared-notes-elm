@@ -14,6 +14,34 @@ body {
   width: 100%;
 }
 
+.screen {
+  position: relative;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.notebook {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 50%;
+  max-width: 800px;
+  min-width: 230px;
+  margin: 20px 0;
+  align-items: center;
+}
+
+.title {
+  font-weight: lighter;
+  background: linear-gradient(#f7d29f, 65%, #e16a2a);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.notebookId {
+}
+
 a {
   color: #e16a2a;
 }

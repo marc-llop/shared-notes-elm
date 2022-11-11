@@ -1,9 +1,8 @@
 module Main exposing (main)
 
 import Browser
-import HelloWorld exposing (helloWorld)
-import Html exposing (Html, button, div, img, text)
-import Html.Attributes exposing (src, style)
+import Html exposing (Html, button, div, img, text, span, h1)
+import Html.Attributes exposing (src, style, class)
 import Html.Events exposing (onClick)
 import Http
 import Identifiers
@@ -46,9 +45,10 @@ view maybeId =
     let
         notebookId = Maybe.withDefault "Generate an ID!" maybeId
     in
-    div []
-        [ img [ src <| VitePluginHelper.asset "/src/assets/logo.png?inline", style "width" "200px" ] []
-        , helloWorld
-        , text <| "Generated ID: " ++ notebookId
-        , button [ onClick GenerateId ] [ text "Generate ID" ]
+    div [ class "screen"]
+        [ div [ class "notebook" ]
+            [ h1 [ class "title" ] [ text "Elm Shared Notes" ]
+            , span [ class "notebookId" ] [ text <| "Generated ID: " ++ notebookId ]
+            , button [ onClick GenerateId ] [ text "Generate ID" ]
+            ]
         ]
