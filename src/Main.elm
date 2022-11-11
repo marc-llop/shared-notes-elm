@@ -1,8 +1,8 @@
 module Main exposing (main)
 
 import Browser
-import Html exposing (Html, button, div, img, text, span, h1)
-import Html.Attributes exposing (src, style, class)
+import Html exposing (Html, button, div, h1, img, span, text)
+import Html.Attributes exposing (class, src, style)
 import Html.Events exposing (onClick)
 import Http
 import Identifiers
@@ -10,14 +10,34 @@ import Task
 import VitePluginHelper
 
 
-type alias Model =
-    Maybe String
+type alias Note =
+    ( String, String )
+
+
+type alias Notes =
+    List Note
+
+
+type Model
+    = OpeningNewNotebook
+    | NotebookOpen String Notes
+
+
+exampleNotes : Notes
+exampleNotes =
+    [ ( "1", "Això és una nota" )
+    , ( "2", "Això és una altra nota" )
+    ]
 
 
 main : Program () Model Msg
 main =
     Browser.element
-        { init = \_ -> ( Nothing, Cmd.none )
+        { init = \_ -> 
+            ( OpeningNewNotebook
+            -- , Task.perform IdGenerated Identifiers.generateNotebookId
+            , Cmd.none
+            )
         , update = update
         , view = view
         , subscriptions = \_ -> Sub.none
@@ -25,30 +45,38 @@ main =
 
 
 type Msg
-    = GenerateId
-    | IdGenerated String
+    = IdGenerated String
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        GenerateId ->
-            ( model, Task.perform IdGenerated Identifiers.generateNotebookId )
+        IdGenerated notebookId ->
+            ( NotebookOpen notebookId exampleNotes, Cmd.none )
 
-        IdGenerated id ->
-            ( Just id, Cmd.none )
 
+spinner : Html msg
+spinner =
+    div [ class "lds-ripple" ]
+        [ div [] []
+        , div [] []
+        ]
 
 
 view : Model -> Html Msg
-view maybeId =
+view model =
     let
-        notebookId = Maybe.withDefault "Generate an ID!" maybeId
+        notebook =
+            case model of
+                OpeningNewNotebook ->
+                    spinner
+
+                NotebookOpen notebookId _ ->
+                    span [ class "notebookId" ] [ text <| "Generated ID: " ++ notebookId ]
     in
-    div [ class "screen"]
+    div [ class "screen" ]
         [ div [ class "notebook" ]
             [ h1 [ class "title" ] [ text "Elm Shared Notes" ]
-            , span [ class "notebookId" ] [ text <| "Generated ID: " ++ notebookId ]
-            , button [ onClick GenerateId ] [ text "Generate ID" ]
+            , notebook
             ]
         ]

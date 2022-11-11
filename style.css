@@ -1,14 +1,18 @@
+
 body {
   margin: 0;
 }
 
 #app {
+  --color-text: #f7d29f;
+  --color-action: #e16a2a;
+  --color-action-hover: #ffd666;
   position: fixed;
   font-family: Avenir, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-align: center;
-  color: #f7d29f;
+  color: var(--color-text);
   height: 100vh;
   background: linear-gradient(-10deg, #301300, 20%, #050010);
   width: 100%;
@@ -34,7 +38,7 @@ body {
 
 .title {
   font-weight: lighter;
-  background: linear-gradient(#f7d29f, 65%, #e16a2a);
+  background: linear-gradient(var(--color-text), 65%, var(--color-action));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -43,9 +47,9 @@ body {
 }
 
 a {
-  color: #e16a2a;
+  color: var(--color-action);
 }
 
 a:hover {
-  color: #ffd666;
+  color: var(--color-action-hover);
 }

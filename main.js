@@ -1,4 +1,5 @@
 import "./style.css";
+import "./spinner.css";
 import { Elm } from "./src/Main.elm";
 
 if (process.env.NODE_ENV === "development") {
