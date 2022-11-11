@@ -1,0 +1,23 @@
+body {
+  margin: 0;
+}
+
+#app {
+  position: fixed;
+  font-family: Avenir, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-align: center;
+  color: #f7d29f;
+  height: 100vh;
+  background: linear-gradient(-10deg, #301300, 20%, #050010);
+  width: 100%;
+}
+
+a {
+  color: #e16a2a;
+}
+
+a:hover {
+  color: #ffd666;
+}
