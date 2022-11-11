@@ -30,14 +30,28 @@ exampleNotes =
     ]
 
 
-main : Program () Model Msg
-main =
-    Browser.element
-        { init = \_ -> 
+init : String -> (Model, Cmd Msg)
+init path = 
+    let
+        newNotebook = 
             ( OpeningNewNotebook
-            -- , Task.perform IdGenerated Identifiers.generateNotebookId
+            , Task.perform IdGenerated Identifiers.generateNotebookId
+            )
+        existingNotebook notebookId = 
+            ( NotebookOpen notebookId exampleNotes
             , Cmd.none
             )
+    in
+    case String.toList path of
+        ['/'] -> newNotebook
+        '/' :: notebookId -> existingNotebook (String.fromList notebookId)
+        _ -> newNotebook
+
+
+main : Program String Model Msg
+main =
+    Browser.element
+        { init = init
         , update = update
         , view = view
         , subscriptions = \_ -> Sub.none
