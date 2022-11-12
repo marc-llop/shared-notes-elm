@@ -54,14 +54,15 @@ exampleNotes =
     ]
         |> Dict.fromList
 
+type alias Flags = {path : String, randomSeed: Int}
 
-init : String -> ( Model, Cmd Msg )
-init path =
+init : Flags -> ( Model, Cmd Msg )
+init {path, randomSeed} =
     let
         newNotebook : ( Model, Cmd Msg )
         newNotebook =
             ( OpeningNewNotebook
-            , Task.perform IdGenerated Identifiers.generateNotebookId
+            , Task.perform IdGenerated (Identifiers.generateNotebookId randomSeed)
             )
 
         existingNotebook : NotebookId -> ( Model, Cmd Msg )
@@ -81,7 +82,7 @@ init path =
             newNotebook
 
 
-main : Program String Model Msg
+main : Program Flags Model Msg
 main =
     Browser.element
         { init = init

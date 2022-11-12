@@ -9,6 +9,7 @@ import Random.Extra
 import Random.String
 import Task exposing (Task)
 import Time
+import Random exposing (Seed)
 
 
 wordsDecoder : Decoder ( String, String )
@@ -42,38 +43,60 @@ API fails it reverts to random characters.
     Task.perform (\s -> NotebookIdGenerated s) generateNotebookId
 
 -}
-generateNotebookId : Task x String
-generateNotebookId =
+generateNotebookId : Int -> Task x String
+generateNotebookId randomSeed =
     let
-        generateTwoShortIds : a -> Task x ( String, String )
-        generateTwoShortIds =
-            \_ -> Task.map2 Tuple.pair generateShortId generateShortId
+        initialSeed : Seed
+        initialSeed = Random.initialSeed randomSeed
+
+        generateOneShortId : a -> Task x String
+        generateOneShortId = \_ -> generateShortId initialSeed
+            |> Task.map (Tuple.first)
+
+        generateThreeShortIds : Seed -> Task x (List String)
+        generateThreeShortIds shortIds =
+            generateShortId initialSeed
+                |> Task.map (Tuple.mapFirst One)
+                |> Task.andThen (generateNextShortId)
+                |> Task.andThen (generateNextShortId)
+                |> Task.map (Tuple.first >> nonEmptyListToList)
+
+        appendGeneratedId : (String, String) -> Task Error (List String)
+        appendGeneratedId (a, b) = generateOneShortId ()
+            |> Task.map (\c -> [ a, b, c ])
+            |> Task.mapError (\_ -> None)
     in
-    -- Attempt to get two real words from an API, because it gives readable and nice IDs.
+    -- Attempt to get two real words from an API, because it gives readable and nice IDs, and one random word.
     requestTwoWords
-        -- If it fails, generate two random alphanum IDs and call it a day.
-        |> Task.onError generateTwoShortIds
-        |> Task.andThen (\( a, b ) -> generateShortId |> Task.map (\c -> [ a, b, c ]))
+        |> Task.mapError Http
+        |> Task.andThen appendGeneratedId
+        -- If it fails, generate three random alphanumeric IDs and call it a day.
+        |> Task.onError (\_ -> generateThreeShortIds initialSeed)
         |> Task.map (String.join "-")
 
+type Error = Http Http.Error | None
 
-randomToTask : Generator a -> Task x a
-randomToTask generator =
+type NonEmptyList = One String | Some String NonEmptyList
+
+generateShortId : Seed -> Task x (String, Seed)
+generateShortId randomSeed =
     Time.now
-        |> Task.map
-            (\posix ->
-                posix
-                    |> Time.posixToMillis
-                    |> Random.initialSeed
-                    |> Random.step generator
-                    |> Tuple.first
-            )
+        |> Task.map (\_ -> Random.step wordGenerator randomSeed
+            |> \(shortId, nextSeed) -> (shortId, nextSeed)
+        )
 
+generateNextShortId : (NonEmptyList, Seed) -> Task x (NonEmptyList, Seed)
+generateNextShortId (shortIds, randomSeed) =
+    generateShortId randomSeed
+        |> Task.map (\(generatedId, nextSeed) -> case shortIds of
+            One previousId -> (Some generatedId (One previousId), nextSeed)
+            Some _ _ -> (Some generatedId shortIds, nextSeed)
+        )
 
-generateShortId : Task x String
-generateShortId =
-    randomToTask wordGenerator
-
+nonEmptyListToList : NonEmptyList -> List String
+nonEmptyListToList list = case list of
+    One x -> [x]
+    Some x xs -> x :: (nonEmptyListToList xs)
 
 wordGenerator : Generator String
 wordGenerator =

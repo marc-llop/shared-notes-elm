@@ -10,8 +10,15 @@ if (process.env.NODE_ENV === "development") {
     })
 }
 
-const root = document.querySelector("#app div");
-const app = Elm.Main.init({ node: root, flags: location.pathname});
+
+const root = document.querySelector("#app div")
+const app = Elm.Main.init({
+    node: root,
+    flags: {
+        path: location.pathname,
+        randomSeed: Array.from(crypto.getRandomValues(new Uint32Array(1)))[0],
+    },
+})
 
 app.ports.updateLocation.subscribe(notebookId => {
     location.replace(notebookId)
