@@ -31,12 +31,11 @@ suite =
                         |> (\( word, chars ) ->
                                 List.foldl
                                     (\char expectResult ->
-                                        if Char.isAlphaNum char
-                                            then
-                                                expectResult
+                                        if Char.isAlphaNum char then
+                                            expectResult
 
-                                            else
-                                                Expect.fail ("Found incorrect character " ++ String.fromList [ char ] ++ " in word " ++ word)
+                                        else
+                                            Expect.fail ("Found incorrect character " ++ String.fromList [ char ] ++ " in word " ++ word)
                                     )
                                     Expect.pass
                                     chars
