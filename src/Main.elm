@@ -1,13 +1,12 @@
-module Main exposing (main)
+module Main exposing (main, Model, Msg)
 
 import Browser
-import Html exposing (Html, button, div, h1, img, span, text)
-import Html.Attributes exposing (class, src, style)
-import Html.Events exposing (onClick)
-import Http
+import Html exposing (Html, div, h1, span, text)
+import Html.Attributes exposing (class)
 import Identifiers
 import Task
-import VitePluginHelper
+-- import VitePluginHelper
+import AutoTextarea exposing (autoTextarea)
 
 
 type alias Note =
@@ -17,10 +16,11 @@ type alias Note =
 type alias Notes =
     List Note
 
+type alias NotebookId = String
 
 type Model
     = OpeningNewNotebook
-    | NotebookOpen String Notes
+    | NotebookOpen NotebookId Notes
 
 
 exampleNotes : Notes
@@ -33,10 +33,13 @@ exampleNotes =
 init : String -> (Model, Cmd Msg)
 init path = 
     let
+        newNotebook : (Model, Cmd Msg)
         newNotebook = 
             ( OpeningNewNotebook
             , Task.perform IdGenerated Identifiers.generateNotebookId
             )
+
+        existingNotebook : NotebookId -> (Model, Cmd Msg)
         existingNotebook notebookId = 
             ( NotebookOpen notebookId exampleNotes
             , Cmd.none
@@ -60,6 +63,7 @@ main =
 
 type Msg
     = IdGenerated String
+    | WriteNote String
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -68,7 +72,10 @@ update msg model =
         IdGenerated notebookId ->
             ( NotebookOpen notebookId exampleNotes, Cmd.none )
 
+        WriteNote _ -> (model, Cmd.none)
 
+
+-- Styles defined in spinner.css
 spinner : Html msg
 spinner =
     div [ class "lds-ripple" ]
@@ -77,20 +84,26 @@ spinner =
         ]
 
 
+openNotebook : NotebookId -> Notes -> Html Msg
+openNotebook notebookId notes =
+    span [ class "notebookId" ] [ text <| "Generated ID: " ++ notebookId ]
+
 view : Model -> Html Msg
 view model =
     let
+        notebook : Html Msg
         notebook =
             case model of
                 OpeningNewNotebook ->
                     spinner
 
-                NotebookOpen notebookId _ ->
-                    span [ class "notebookId" ] [ text <| "Generated ID: " ++ notebookId ]
+                NotebookOpen notebookId notes ->
+                    openNotebook notebookId notes
     in
     div [ class "screen" ]
         [ div [ class "notebook" ]
             [ h1 [ class "title" ] [ text "Elm Shared Notes" ]
             , notebook
+            , autoTextarea {value = "Hello there!", placeholder = "Write something...", onInput = WriteNote }
             ]
         ]

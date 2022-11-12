@@ -1,4 +1,4 @@
-module IdentifiersSpec exposing (..)
+module IdentifiersSpec exposing (suite)
 
 import Expect
 import Fuzz
@@ -31,11 +31,11 @@ suite =
                         |> (\( word, chars ) ->
                                 List.foldl
                                     (\char expectResult ->
-                                        case Char.isAlphaNum char of
-                                            True ->
+                                        if Char.isAlphaNum char
+                                            then
                                                 expectResult
 
-                                            False ->
+                                            else
                                                 Expect.fail ("Found incorrect character " ++ String.fromList [ char ] ++ " in word " ++ word)
                                     )
                                     Expect.pass

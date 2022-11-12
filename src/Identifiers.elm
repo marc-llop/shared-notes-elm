@@ -45,13 +45,13 @@ API fails it reverts to random characters.
 generateNotebookId : Task x String
 generateNotebookId =
     let
-        generateTwoShortIds : Task x (String, String)
-        generateTwoShortIds = Task.map2 Tuple.pair generateShortId generateShortId
+        generateTwoShortIds : a -> Task x (String, String)
+        generateTwoShortIds = \_ -> Task.map2 Tuple.pair generateShortId generateShortId
     in
     -- Attempt to get two real words from an API, because it gives readable and nice IDs.
     requestTwoWords
         -- If it fails, generate two random alphanum IDs and call it a day.
-        |> Task.onError (\_ -> generateTwoShortIds)
+        |> Task.onError generateTwoShortIds
         |> Task.andThen (\(a, b) -> generateShortId |> Task.map (\c -> [a, b, c]))
         |> Task.map (String.join "-")
 
@@ -82,6 +82,7 @@ alphanumericGenerator =
 numericCharGenerator : Generator Char
 numericCharGenerator =
     let
+        intToChar : Int -> Char
         intToChar i = Char.fromCode (i + Char.toCode '0')
     in
     Random.int 0 9

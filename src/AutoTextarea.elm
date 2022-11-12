@@ -7,12 +7,14 @@ import Html.Styled.Attributes as Attributes exposing (css)
 import Html.Styled.Events as Events
 
 
+autoExpandStyles : List Style
 autoExpandStyles =
     [ position relative
     , width (px 400)
     ]
 
 
+textareaStyles : List Style
 textareaStyles =
     divStyles
         ++ [ position absolute
@@ -23,6 +25,7 @@ textareaStyles =
            ]
 
 
+divStyles : List Style
 divStyles =
     [ padding (px 10)
     , fontSize (px 16)
@@ -34,19 +37,19 @@ divStyles =
 
 
 autoTextarea :
-    { text : String
+    { value : String
     , onInput : String -> msg
     , placeholder : String
     }
     -> Html.Html msg
-autoTextarea { text, onInput, placeholder } =
+autoTextarea { value, onInput, placeholder } =
     div [ css autoExpandStyles ]
         [ textarea
             [ css textareaStyles
             , Events.onInput onInput
             , Attributes.placeholder placeholder
             ]
-            [ Html.Styled.text text ]
-        , div [ css divStyles ] [ Html.Styled.text (text ++ "_") ]
+            [ text value ]
+        , div [ css divStyles ] [ text (value ++ "_") ]
         ]
         |> Html.Styled.toUnstyled

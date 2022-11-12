@@ -1,4 +1,4 @@
-module HelloWorldSpec exposing (..)
+module HelloWorldSpec exposing (suite)
 
 -- import HelloWorld exposing (helloWorld)
 -- import Msg
