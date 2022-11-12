@@ -1,12 +1,15 @@
-module Main exposing (main, Model, Msg)
+module Main exposing (Model, Msg, main)
 
+-- import VitePluginHelper
+
+import AutoTextarea exposing (autoTextarea)
 import Browser
+import Dict exposing (Dict)
 import Html exposing (Html, div, h1, span, text)
 import Html.Attributes exposing (class)
+import Html.Events exposing (onInput)
 import Identifiers
 import Task
--- import VitePluginHelper
-import AutoTextarea exposing (autoTextarea)
 
 
 type alias Note =
@@ -14,9 +17,12 @@ type alias Note =
 
 
 type alias Notes =
-    List Note
+    Dict String String
 
-type alias NotebookId = String
+
+type alias NotebookId =
+    String
+
 
 type Model
     = OpeningNewNotebook
@@ -28,27 +34,33 @@ exampleNotes =
     [ ( "1", "Això és una nota" )
     , ( "2", "Això és una altra nota" )
     ]
+        |> Dict.fromList
 
 
-init : String -> (Model, Cmd Msg)
-init path = 
+init : String -> ( Model, Cmd Msg )
+init path =
     let
-        newNotebook : (Model, Cmd Msg)
-        newNotebook = 
+        newNotebook : ( Model, Cmd Msg )
+        newNotebook =
             ( OpeningNewNotebook
             , Task.perform IdGenerated Identifiers.generateNotebookId
             )
 
-        existingNotebook : NotebookId -> (Model, Cmd Msg)
-        existingNotebook notebookId = 
+        existingNotebook : NotebookId -> ( Model, Cmd Msg )
+        existingNotebook notebookId =
             ( NotebookOpen notebookId exampleNotes
             , Cmd.none
             )
     in
     case String.toList path of
-        ['/'] -> newNotebook
-        '/' :: notebookId -> existingNotebook (String.fromList notebookId)
-        _ -> newNotebook
+        [ '/' ] ->
+            newNotebook
+
+        '/' :: notebookId ->
+            existingNotebook (String.fromList notebookId)
+
+        _ ->
+            newNotebook
 
 
 main : Program String Model Msg
@@ -63,7 +75,7 @@ main =
 
 type Msg
     = IdGenerated String
-    | WriteNote String
+    | WriteNote String String
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -72,10 +84,22 @@ update msg model =
         IdGenerated notebookId ->
             ( NotebookOpen notebookId exampleNotes, Cmd.none )
 
-        WriteNote _ -> (model, Cmd.none)
+        WriteNote noteId value ->
+            ( case model of
+                OpeningNewNotebook ->
+                    model
+
+                NotebookOpen notebookId notes ->
+                    NotebookOpen notebookId
+                        (Dict.update noteId (\_ -> Just value) notes)
+            , Cmd.none
+            )
+
 
 
 -- Styles defined in spinner.css
+
+
 spinner : Html msg
 spinner =
     div [ class "lds-ripple" ]
@@ -84,9 +108,28 @@ spinner =
         ]
 
 
+noteView : { note : Note, onInput : String -> String -> msg } -> Html msg
+noteView { note, onInput } =
+    autoTextarea
+        { value = Tuple.second note
+        , onInput = onInput (Tuple.first note)
+        , placeholder = ""
+        }
+
+
 openNotebook : NotebookId -> Notes -> Html Msg
 openNotebook notebookId notes =
-    span [ class "notebookId" ] [ text <| "Generated ID: " ++ notebookId ]
+    let
+        notesList : List (Html Msg)
+        notesList =
+            Dict.toList notes
+                |> List.map (\note -> noteView { note = note, onInput = WriteNote })
+    in
+    div [ class "notebook" ]
+        [ span [ class "notebookId" ] [ text <| "Generated ID: " ++ notebookId ]
+        , div [ class "notesList" ] notesList
+        ]
+
 
 view : Model -> Html Msg
 view model =
@@ -101,9 +144,8 @@ view model =
                     openNotebook notebookId notes
     in
     div [ class "screen" ]
-        [ div [ class "notebook" ]
+        [ div [ class "notebookScreen" ]
             [ h1 [ class "title" ] [ text "Elm Shared Notes" ]
             , notebook
-            , autoTextarea {value = "Hello there!", placeholder = "Write something...", onInput = WriteNote }
             ]
         ]

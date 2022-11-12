@@ -10,7 +10,7 @@ import Html.Styled.Events as Events
 autoExpandStyles : List Style
 autoExpandStyles =
     [ position relative
-    , width (px 400)
+    , width (pct 100)
     ]
 
 
@@ -20,8 +20,11 @@ textareaStyles =
         ++ [ position absolute
            , top zero
            , bottom zero
+           , left zero
+           , boxSizing borderBox
            , width (pct 100)
            , resize none
+           , property "color" "var(--color-text)"
            ]
 
 
@@ -33,6 +36,8 @@ divStyles =
     , border3 (px 1) solid (hex "#666")
     , lineHeight (em 1.3)
     , whiteSpace preWrap
+    , color transparent
+    , backgroundColor transparent
     ]
 
 

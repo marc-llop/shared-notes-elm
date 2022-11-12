@@ -25,7 +25,7 @@ body {
   justify-content: center;
 }
 
-.notebook {
+.notebookScreen {
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -37,7 +37,7 @@ body {
 }
 
 @media (max-width: 500px) {
-  .notebook {
+  .notebookScreen {
     width: 100%;
     margin: 0 8px;
   }
@@ -58,6 +58,17 @@ body {
 }
 
 .notebookId {
+}
+
+.notebook {
+  width: 100%;
+}
+
+.notesList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
 }
 
 a {
