@@ -16,16 +16,21 @@ autoExpandStyles =
 
 textareaStyles : List Style
 textareaStyles =
-    divStyles
-        ++ [ position absolute
-           , top zero
-           , bottom zero
-           , left zero
-           , boxSizing borderBox
-           , width (pct 100)
-           , resize none
-           , property "color" "var(--color-text)"
-           ]
+    divStyles ++ 
+        [ position absolute
+        , top zero
+        , bottom zero
+        , left zero
+        , boxSizing borderBox
+        , width (pct 100)
+        , resize none
+        , property "color" "var(--color-text)"
+        , property "border-left" "2px solid var(--color-handle)"
+        , focus
+            [ borderLeft3 (px 2) solid transparent
+            , property "outline" "2px groove var(--color-handle)"
+            ]
+        ]
 
 
 divStyles : List Style
@@ -33,7 +38,9 @@ divStyles =
     [ padding (px 10)
     , fontSize (px 16)
     , fontFamily sansSerif
-    , border3 (px 1) solid (hex "#666")
+    , borderTop (px 0)
+    , borderBottom (px 0)
+    , borderRight (px 0)
     , lineHeight (em 1.3)
     , whiteSpace preWrap
     , color transparent

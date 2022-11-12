@@ -7,6 +7,7 @@ body {
   --color-text: #f7d29f;
   --color-action: #e16a2a;
   --color-action-hover: #ffd666;
+  --color-handle: #e19a2a70;
   position: fixed;
   font-family: Avenir, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
