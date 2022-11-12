@@ -1,4 +1,4 @@
-module Main exposing (Model, Msg, main)
+port module Main exposing (Model, Msg, main)
 
 -- import VitePluginHelper
 
@@ -10,6 +10,9 @@ import Html.Attributes exposing (class)
 import Html.Events exposing (onInput)
 import Identifiers
 import Task
+
+
+port updateLocation : String -> Cmd msg
 
 
 type alias Note =
@@ -82,7 +85,7 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         IdGenerated notebookId ->
-            ( NotebookOpen notebookId exampleNotes, Cmd.none )
+            ( NotebookOpen notebookId exampleNotes, updateLocation notebookId )
 
         WriteNote noteId value ->
             ( case model of

@@ -12,3 +12,7 @@ if (process.env.NODE_ENV === "development") {
 
 const root = document.querySelector("#app div");
 const app = Elm.Main.init({ node: root, flags: location.pathname});
+
+app.ports.updateLocation.subscribe(notebookId => {
+    location.replace(notebookId)
+})
