@@ -36,6 +36,21 @@ exampleNotes : Notes
 exampleNotes =
     [ ( "1", "Això és una nota" )
     , ( "2", "Això és una altra nota" )
+    , ( "3", "Això és una altra nota" )
+    , ( "4", "Això és una altra nota" )
+    , ( "5", "Això és una altra nota" )
+    , ( "6", "Això és una altra nota" )
+    , ( "7", "Això és una altra nota" )
+    , ( "8", "Això és una altra nota" )
+    , ( "9", "Això és una altra nota" )
+    , ( "21", "Això és una altra nota" )
+    , ( "22", "Això és una altra nota" )
+    , ( "23", "Això és una altra nota" )
+    , ( "24", "Això és una altra nota" )
+    , ( "25", "Això és una altra nota" )
+    , ( "26", "Això és una altra nota" )
+    , ( "27", "Això és una altra nota" )
+    , ( "28", "Nota final" )
     ]
         |> Dict.fromList
 
@@ -126,6 +141,7 @@ openNotebook notebookId notes =
         notesList : List (Html Msg)
         notesList =
             Dict.toList notes
+                |> List.sortBy (Tuple.first >> String.toInt >> Maybe.withDefault 0)
                 |> List.map (\note -> noteView { note = note, onInput = WriteNote })
     in
     div [ class "notebook" ]
