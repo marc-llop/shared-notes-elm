@@ -26,6 +26,11 @@ textareaStyles =
            , resize none
            , property "color" "var(--color-text)"
            , property "border-left" "2px solid var(--color-handle)"
+           , hover
+                [ property
+                    "background"
+                    "linear-gradient(90deg, transparent, 70%, transparent, 95%, var(--color-handle))"
+                ]
            , focus
                 [ borderLeft3 (px 2) solid transparent
                 , property "outline" "2px groove var(--color-handle)"
