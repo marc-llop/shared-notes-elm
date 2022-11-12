@@ -33,6 +33,8 @@ requestTwoWords =
         , resolver = Http.Tasks.resolveJson wordsDecoder
         }
 
+-- Auxiliary Error type that allows mixing (Task x a) with (Task Http.Error a)
+type Error = Http Http.Error | None
 
 {-| Generates a notebook ID of the form xxxxx-xxxxx-xxxxx (three words
 of five lowercase alphanumeric characters separated by hyphens).
@@ -49,21 +51,16 @@ generateNotebookId randomSeed =
         initialSeed : Seed
         initialSeed = Random.initialSeed randomSeed
 
-        generateOneShortId : a -> Task x String
-        generateOneShortId = \_ -> generateShortId initialSeed
-            |> Task.map (Tuple.first)
-
         generateThreeShortIds : Seed -> Task x (List String)
         generateThreeShortIds shortIds =
-            generateShortId initialSeed
-                |> Task.map (Tuple.mapFirst One)
+            generateNextShortId ([], initialSeed)
                 |> Task.andThen (generateNextShortId)
                 |> Task.andThen (generateNextShortId)
-                |> Task.map (Tuple.first >> nonEmptyListToList)
+                |> Task.map (Tuple.first)
 
         appendGeneratedId : (String, String) -> Task Error (List String)
-        appendGeneratedId (a, b) = generateOneShortId ()
-            |> Task.map (\c -> [ a, b, c ])
+        appendGeneratedId (a, b) = generateShortId initialSeed
+            |> Task.map (\(c, _) -> [ a, b, c ])
             |> Task.mapError (\_ -> None)
     in
     -- Attempt to get two real words from an API, because it gives readable and nice IDs, and one random word.
@@ -74,9 +71,6 @@ generateNotebookId randomSeed =
         |> Task.onError (\_ -> generateThreeShortIds initialSeed)
         |> Task.map (String.join "-")
 
-type Error = Http Http.Error | None
-
-type NonEmptyList = One String | Some String NonEmptyList
 
 generateShortId : Seed -> Task x (String, Seed)
 generateShortId randomSeed =
@@ -85,18 +79,11 @@ generateShortId randomSeed =
             |> \(shortId, nextSeed) -> (shortId, nextSeed)
         )
 
-generateNextShortId : (NonEmptyList, Seed) -> Task x (NonEmptyList, Seed)
+generateNextShortId : (List String, Seed) -> Task x (List String, Seed)
 generateNextShortId (shortIds, randomSeed) =
     generateShortId randomSeed
-        |> Task.map (\(generatedId, nextSeed) -> case shortIds of
-            One previousId -> (Some generatedId (One previousId), nextSeed)
-            Some _ _ -> (Some generatedId shortIds, nextSeed)
-        )
+        |> Task.map (\(generatedId, nextSeed) -> (shortIds ++ [generatedId], nextSeed))
 
-nonEmptyListToList : NonEmptyList -> List String
-nonEmptyListToList list = case list of
-    One x -> [x]
-    Some x xs -> x :: (nonEmptyListToList xs)
 
 wordGenerator : Generator String
 wordGenerator =
