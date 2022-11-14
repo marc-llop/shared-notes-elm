@@ -152,7 +152,7 @@ openNotebook notebookId notes =
     div [ class "notebook" ]
         [ span [ class "notebookId" ] [ text <| "Generated ID: " ++ notebookId ]
         , div [ class "notesList" ] notesList
-        , buttonView { icon = Icons.plus, onClick = AddNote }
+        , buttonView { icon = Icons.plus, onClick = AddNote, description = "Add Note" }
         ]
 
 

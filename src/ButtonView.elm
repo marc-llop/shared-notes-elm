@@ -46,13 +46,19 @@ iconStyles =
     ]
 
 
-buttonView : {icon : List Style -> Html.Styled.Html msg, onClick : msg} -> Html msg
-buttonView {icon, onClick} =
+buttonView : 
+    { icon : List Style -> Html.Styled.Html msg
+    , onClick : msg
+    , description : String
+    } -> Html msg
+buttonView {icon, onClick, description} =
     div
         [ css divStyles ]
         [ button
             [ css buttonStyles
             , Events.onClick onClick
+            , attribute "aria-label" description
+            , title description
             ]
             [ icon iconStyles ]
         ]
