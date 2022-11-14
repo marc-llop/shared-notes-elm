@@ -6,11 +6,27 @@ import Html.Styled exposing (div, text, textarea)
 import Html.Styled.Attributes as Attributes exposing (css)
 import Html.Styled.Events as Events
 
+marginForButtons = (px 30)
 
 autoExpandStyles : List Style
 autoExpandStyles =
     [ position relative
     , width (pct 100)
+    , borderRadius (px 2)
+    , margin2 (px 2) zero
+    , boxSizing borderBox
+    , paddingRight marginForButtons
+    , property "border-left" "2px solid var(--color-handle)"
+    , hover
+        [ property "border-left" "2px solid var(--color-handle-hover)"
+        , property
+            "background"
+            "linear-gradient(90deg, transparent, 70%, transparent, 95%, var(--color-handle))"
+        ]
+    , pseudoClass "focus-within"
+        [ margin zero
+        , property "border" "2px solid var(--color-handle-hover)" 
+        ]
     ]
 
 
@@ -21,20 +37,10 @@ textareaStyles =
            , top zero
            , bottom zero
            , left zero
-           , boxSizing borderBox
-           , width (pct 100)
            , resize none
            , property "color" "var(--color-text)"
-           , property "border-left" "2px solid var(--color-handle)"
-           , hover
-                [ property
-                    "background"
-                    "linear-gradient(90deg, transparent, 70%, transparent, 95%, var(--color-handle))"
-                ]
-           , focus
-                [ borderLeft3 (px 2) solid transparent
-                , property "outline" "2px groove var(--color-handle)"
-                ]
+           , outline none
+           , width (calc (pct 100) minus marginForButtons)
            ]
 
 
@@ -43,13 +49,14 @@ divStyles =
     [ padding (px 10)
     , fontSize (px 16)
     , fontFamily sansSerif
-    , borderTop (px 0)
-    , borderBottom (px 0)
-    , borderRight (px 0)
+    , border (px 0)
     , lineHeight (em 1.3)
     , whiteSpace preWrap
     , color transparent
     , backgroundColor transparent
+    , boxSizing borderBox
+    , margin zero
+    , textAlign left
     ]
 
 

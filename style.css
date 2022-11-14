@@ -8,6 +8,7 @@ body {
   --color-action: #e16a2a;
   --color-action-hover: #ffd666;
   --color-handle: #e19a2a70;
+  --color-handle-hover: #e19a2acc;
   position: fixed;
   font-family: Avenir, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
