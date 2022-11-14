@@ -2,11 +2,12 @@ module AutoTextarea exposing (autoTextarea)
 
 import Css exposing (..)
 import Html
-import Html.Styled exposing (div, text, textarea)
+import Html.Styled exposing (div, text, textarea, button)
 import Html.Styled.Attributes as Attributes exposing (css)
 import Html.Styled.Events as Events
+import Icons exposing (trash2)
 
-marginForButtons = (px 30)
+marginForButtons = (px 40)
 
 autoExpandStyles : List Style
 autoExpandStyles =
@@ -14,14 +15,15 @@ autoExpandStyles =
     , width (pct 100)
     , borderRadius (px 2)
     , margin2 (px 2) zero
-    , boxSizing borderBox
-    , paddingRight marginForButtons
+    , display inlineFlex
     , property "border-left" "2px solid var(--color-handle)"
+    , property "--delete-button-visibility" "hidden"
     , hover
         [ property "border-left" "2px solid var(--color-handle-hover)"
         , property
             "background"
             "linear-gradient(90deg, transparent, 70%, transparent, 95%, var(--color-handle))"
+        , property "--delete-button-visibility" "visible"
         ]
     , pseudoClass "focus-within"
         [ margin zero
@@ -40,7 +42,6 @@ textareaStyles =
            , resize none
            , property "color" "var(--color-text)"
            , outline none
-           , width (calc (pct 100) minus marginForButtons)
            ]
 
 
@@ -54,9 +55,33 @@ divStyles =
     , whiteSpace preWrap
     , color transparent
     , backgroundColor transparent
-    , boxSizing borderBox
     , margin zero
     , textAlign left
+    , width (calc (pct 100) minus marginForButtons)
+    , flexGrow (num 1)
+    ]
+
+deleteButtonStyles : List Style
+deleteButtonStyles =
+    [ backgroundColor transparent
+    , padding zero
+    , width marginForButtons
+    , border zero
+    , cursor pointer
+    , property "visibility" "var(--delete-button-visibility)"
+    , property "color" "var(--color-action)"
+    , displayFlex
+    , alignItems center
+    , justifyContent center
+    , hover
+        [ property "filter" "drop-shadow(0 0 3px var(--color-action))"
+        , property "color" "var(--color-action-hover)"
+        ]
+    ]
+
+trashIconStyles : List Style
+trashIconStyles =
+    [ width (px 20)
     ]
 
 
@@ -75,5 +100,10 @@ autoTextarea { value, onInput, placeholder } =
             ]
             [ text value ]
         , div [ css divStyles ] [ text (value ++ "_") ]
+        , button
+            [ css deleteButtonStyles
+            , Events.onClick (onInput value)
+            ]
+            [ trash2 trashIconStyles ] 
         ]
         |> Html.Styled.toUnstyled

@@ -3,6 +3,10 @@ body {
   margin: 0;
 }
 
+* {
+  box-sizing: border-box;
+}
+
 #app {
   --color-text: #f7d29f;
   --color-action: #e16a2a;
