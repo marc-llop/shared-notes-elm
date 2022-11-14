@@ -28,6 +28,7 @@ autoExpandStyles =
     , pseudoClass "focus-within"
         [ margin zero
         , property "border" "2px solid var(--color-handle-hover)" 
+        , property "--delete-button-visibility" "visible"
         ]
     ]
 
@@ -58,7 +59,6 @@ divStyles =
     , margin zero
     , textAlign left
     , width (calc (pct 100) minus marginForButtons)
-    , flexGrow (num 1)
     ]
 
 deleteButtonStyles : List Style
@@ -77,6 +77,8 @@ deleteButtonStyles =
         [ property "filter" "drop-shadow(0 0 3px var(--color-action))"
         , property "color" "var(--color-action-hover)"
         ]
+    , focus
+        [ property "outline" "2px solid var(--color-handle-hover)" ]
     ]
 
 trashIconStyles : List Style
@@ -103,6 +105,8 @@ autoTextarea { value, onInput, placeholder } =
         , button
             [ css deleteButtonStyles
             , Events.onClick (onInput value)
+            , Attributes.attribute "aria-label" "Delete note"
+            , Attributes.title "Delete note"
             ]
             [ trash2 trashIconStyles ] 
         ]
