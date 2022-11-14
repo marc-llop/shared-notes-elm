@@ -10,7 +10,8 @@ import Html.Attributes exposing (class)
 import Html.Events exposing (onInput)
 import Identifiers
 import Task
-
+import ButtonView exposing (buttonView)
+import Icons
 
 port updateLocation : String -> Cmd msg
 
@@ -95,6 +96,7 @@ main =
 type Msg
     = IdGenerated String
     | WriteNote String String
+    | AddNote
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -113,6 +115,8 @@ update msg model =
                         (Dict.update noteId (\_ -> Just value) notes)
             , Cmd.none
             )
+
+        AddNote -> (model, Cmd.none)
 
 
 
@@ -148,6 +152,7 @@ openNotebook notebookId notes =
     div [ class "notebook" ]
         [ span [ class "notebookId" ] [ text <| "Generated ID: " ++ notebookId ]
         , div [ class "notesList" ] notesList
+        , buttonView { icon = Icons.plus, onClick = AddNote }
         ]
 
 

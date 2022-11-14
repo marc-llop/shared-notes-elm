@@ -2,12 +2,15 @@ module AutoTextarea exposing (autoTextarea)
 
 import Css exposing (..)
 import Html
-import Html.Styled exposing (div, text, textarea, button)
+import Html.Styled exposing (button, div, text, textarea)
 import Html.Styled.Attributes as Attributes exposing (css)
 import Html.Styled.Events as Events
-import Icons exposing (trash2)
+import Icons exposing (iconButtonStyles, trash2)
 
-marginForButtons = (px 40)
+
+marginForButtons =
+    px 40
+
 
 autoExpandStyles : List Style
 autoExpandStyles =
@@ -27,7 +30,7 @@ autoExpandStyles =
         ]
     , pseudoClass "focus-within"
         [ margin zero
-        , property "border" "2px solid var(--color-handle-hover)" 
+        , property "border" "2px solid var(--color-handle-hover)"
         , property "--delete-button-visibility" "visible"
         ]
     ]
@@ -61,30 +64,16 @@ divStyles =
     , width (calc (pct 100) minus marginForButtons)
     ]
 
+
 deleteButtonStyles : List Style
 deleteButtonStyles =
-    [ backgroundColor transparent
-    , padding zero
-    , width marginForButtons
-    , border zero
-    , cursor pointer
-    , property "visibility" "var(--delete-button-visibility)"
-    , property "color" "var(--color-action)"
-    , displayFlex
-    , alignItems center
-    , justifyContent center
-    , hover
-        [ property "filter" "drop-shadow(0 0 3px var(--color-action))"
-        , property "color" "var(--color-action-hover)"
-        ]
-    , focus
-        [ property "outline" "2px solid var(--color-handle-hover)" ]
-    ]
-
-trashIconStyles : List Style
-trashIconStyles =
-    [ width (px 20)
-    ]
+    iconButtonStyles
+        ++ [ backgroundColor transparent
+           , padding zero
+           , width marginForButtons
+           , property "visibility" "var(--delete-button-visibility)"
+           , property "filter" "drop-shadow(0 0 3px var(--color-action))"
+           ]
 
 
 autoTextarea :
@@ -108,6 +97,6 @@ autoTextarea { value, onInput, placeholder } =
             , Attributes.attribute "aria-label" "Delete note"
             , Attributes.title "Delete note"
             ]
-            [ trash2 trashIconStyles ] 
+            [ trash2 ]
         ]
         |> Html.Styled.toUnstyled
