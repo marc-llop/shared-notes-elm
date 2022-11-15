@@ -8,10 +8,12 @@ import Dict exposing (Dict)
 import Html exposing (Html, div, h1, span, text)
 import Html.Attributes exposing (class)
 import Html.Events exposing (onInput)
-import Identifiers
+import Identifiers exposing (NotebookId, parseNotebookId, notebookIdToString)
 import Task
 import ButtonView exposing (buttonView)
 import Icons
+import Json.Decode as Decode
+import Regex
 
 port updateLocation : String -> Cmd msg
 
@@ -22,10 +24,6 @@ type alias Note =
 
 type alias Notes =
     Dict String String
-
-
-type alias NotebookId =
-    String
 
 
 type Model
@@ -77,7 +75,10 @@ init {path, randomSeed} =
             newNotebook
 
         '/' :: notebookId ->
-            existingNotebook (String.fromList notebookId)
+            String.fromList notebookId
+                |> parseNotebookId
+                |> Result.map existingNotebook
+                |> Result.withDefault newNotebook
 
         _ ->
             newNotebook
@@ -94,7 +95,7 @@ main =
 
 
 type Msg
-    = IdGenerated String
+    = IdGenerated NotebookId
     | WriteNote String String
     | AddNote
 
@@ -103,7 +104,7 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         IdGenerated notebookId ->
-            ( NotebookOpen notebookId exampleNotes, updateLocation notebookId )
+            ( NotebookOpen notebookId exampleNotes, updateLocation (notebookIdToString notebookId) )
 
         WriteNote noteId value ->
             ( case model of
@@ -150,7 +151,7 @@ openNotebook notebookId notes =
                 |> List.map (\note -> noteView { note = note, onInput = WriteNote })
     in
     div [ class "notebook" ]
-        [ span [ class "notebookId" ] [ text <| "Generated ID: " ++ notebookId ]
+        [ span [ class "notebookId" ] [ text <| "Generated ID: " ++ notebookIdToString notebookId ]
         , div [ class "notesList" ] notesList
         , buttonView { icon = Icons.plus, onClick = AddNote, description = "Add Note" }
         ]

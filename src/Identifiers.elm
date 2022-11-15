@@ -1,4 +1,4 @@
-module Identifiers exposing (generateNotebookId, wordGenerator)
+module Identifiers exposing (NotebookId, notebookIdToString, generateNotebookId, wordGenerator, notebookIdRegex, parseNotebookId)
 
 import Http
 import Http.Tasks
@@ -10,7 +10,40 @@ import Random.String
 import Task exposing (Task)
 import Time
 import Random exposing (Seed)
+import Html.Attributes exposing (id)
+import Regex
 
+-- Identifies a Notebook. It renders as three dash-separated five-letter strings,
+-- like dizzy-pacas-a6f87.
+type NotebookId = NotebookId String
+
+notebookIdFromWords : String -> String -> String -> NotebookId
+notebookIdFromWords a b c = NotebookId <| String.join "-" [a, b, c]
+
+notebookIdToString : NotebookId -> String
+notebookIdToString (NotebookId a) = a
+
+-- Length in characters of the shortIds that compose NotebookIds
+idWordLength : Int
+idWordLength = 5
+
+wordSubRegex : String
+wordSubRegex = "[a-z0-9]{" ++ String.fromInt idWordLength ++ "}"
+
+notebookIdRegex : Regex.Regex
+notebookIdRegex = 
+    ["^", wordSubRegex, "-", wordSubRegex, "-", wordSubRegex, "$"]
+        |> String.join ""
+        |> Regex.fromString
+        |> Maybe.withDefault Regex.never
+
+-- Tries to parse a NotebookId. Valid NotebookIds are composed of three words
+-- of 5 characters (a-z lowercase and 0-9) divided by "-".
+parseNotebookId : String -> Result String NotebookId
+parseNotebookId str = 
+    if Regex.contains notebookIdRegex str
+        then Ok (NotebookId str)
+        else Err ("Tried to create an invalid notebookId: " ++ str)
 
 wordsDecoder : Decoder ( String, String )
 wordsDecoder =
@@ -29,7 +62,7 @@ wordsDecoder =
 requestTwoWords : Task Http.Error ( String, String )
 requestTwoWords =
     Http.Tasks.get
-        { url = "https://random-word-api.herokuapp.com/word?number=2&length=5"
+        { url = "https://random-word-api.herokuapp.com/word?number=2&length=" ++ String.fromInt idWordLength
         , resolver = Http.Tasks.resolveJson wordsDecoder
         }
 
@@ -45,22 +78,22 @@ API fails it reverts to random characters.
     Task.perform (\s -> NotebookIdGenerated s) generateNotebookId
 
 -}
-generateNotebookId : Int -> Task x String
+generateNotebookId : Int -> Task x NotebookId
 generateNotebookId randomSeed =
     let
         initialSeed : Seed
         initialSeed = Random.initialSeed randomSeed
 
-        generateThreeShortIds : Seed -> Task x (List String)
+        generateThreeShortIds : Seed -> Task x NotebookId
         generateThreeShortIds shortIds =
-            generateNextShortId ([], initialSeed)
+            generateNextShortId (notebookIdFromWords, initialSeed)
                 |> Task.andThen (generateNextShortId)
                 |> Task.andThen (generateNextShortId)
                 |> Task.map (Tuple.first)
 
-        appendGeneratedId : (String, String) -> Task Error (List String)
+        appendGeneratedId : (String, String) -> Task Error NotebookId
         appendGeneratedId (a, b) = generateShortId initialSeed
-            |> Task.map (\(c, _) -> [ a, b, c ])
+            |> Task.map (\(c, _) -> notebookIdFromWords a b c)
             |> Task.mapError (\_ -> None)
     in
     -- Attempt to get two real words from an API, because it gives readable and nice IDs, and one random word.
@@ -69,7 +102,6 @@ generateNotebookId randomSeed =
         |> Task.andThen appendGeneratedId
         -- If it fails, generate three random alphanumeric IDs and call it a day.
         |> Task.onError (\_ -> generateThreeShortIds initialSeed)
-        |> Task.map (String.join "-")
 
 
 generateShortId : Seed -> Task x (String, Seed)
@@ -79,15 +111,15 @@ generateShortId randomSeed =
             |> \(shortId, nextSeed) -> (shortId, nextSeed)
         )
 
-generateNextShortId : (List String, Seed) -> Task x (List String, Seed)
+generateNextShortId : (String -> a, Seed) -> Task x (a, Seed)
 generateNextShortId (shortIds, randomSeed) =
     generateShortId randomSeed
-        |> Task.map (\(generatedId, nextSeed) -> (shortIds ++ [generatedId], nextSeed))
+        |> Task.map (\(generatedId, nextSeed) -> (shortIds generatedId, nextSeed))
 
 
 wordGenerator : Generator String
 wordGenerator =
-    Random.String.string 5 alphanumericGenerator
+    Random.String.string idWordLength alphanumericGenerator
 
 
 alphanumericGenerator : Generator Char
