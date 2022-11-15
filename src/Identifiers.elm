@@ -1,6 +1,5 @@
 module Identifiers exposing (NotebookId, generateNotebookId, notebookIdToString, parseNotebookId, wordGenerator)
 
-import Html.Attributes exposing (id)
 import Http
 import Http.Tasks
 import Json.Decode as Decode exposing (Decoder)
@@ -55,7 +54,7 @@ wordSubRegex =
 notebookIdRegex : Regex.Regex
 notebookIdRegex =
     [ "^", wordSubRegex, "-", wordSubRegex, "-", wordSubRegex, "$" ]
-        |> String.join ""
+        |> String.concat
         |> Regex.fromString
         |> Maybe.withDefault Regex.never
 
@@ -104,11 +103,10 @@ requestTwoWords =
 
 
 
--- Auxiliary Error type that allows mixing (Task x a) with (Task Http.Error a)
-
-
+{-| Auxiliary Error type that allows mixing (Task x a) with (Task Http.Error a)
+-}
 type Error
-    = Http Http.Error
+    = Http
     | None
 
 
@@ -128,8 +126,8 @@ generateNotebookId randomSeed =
         initialSeed =
             Random.initialSeed randomSeed
 
-        generateThreeShortIds : Seed -> Task x NotebookId
-        generateThreeShortIds shortIds =
+        generateThreeShortIds : a -> Task x NotebookId
+        generateThreeShortIds _ =
             generateNextShortId ( notebookIdFromWords, initialSeed )
                 |> Task.andThen generateNextShortId
                 |> Task.andThen generateNextShortId
@@ -143,10 +141,10 @@ generateNotebookId randomSeed =
     in
     -- Attempt to get two real words from an API, because it gives readable and nice IDs, and one random word.
     requestTwoWords
-        |> Task.mapError Http
+        |> Task.mapError (\_ -> Http)
         |> Task.andThen appendGeneratedId
         -- If it fails, generate three random alphanumeric IDs and call it a day.
-        |> Task.onError (\_ -> generateThreeShortIds initialSeed)
+        |> Task.onError generateThreeShortIds
 
 
 generateShortId : Seed -> Task x ( String, Seed )

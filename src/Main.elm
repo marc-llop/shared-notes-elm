@@ -1,4 +1,4 @@
-port module Main exposing (Model, Msg, main)
+port module Main exposing (Model, Msg, Flags, main)
 
 -- import VitePluginHelper
 
@@ -8,11 +8,8 @@ import ButtonView exposing (buttonView)
 import Dict exposing (Dict)
 import Html exposing (Html, div, h1, span, text)
 import Html.Attributes exposing (class)
-import Html.Events exposing (onInput)
 import Icons
 import Identifiers exposing (NotebookId, notebookIdToString, parseNotebookId)
-import Json.Decode as Decode
-import Regex
 import Task
 
 

@@ -8,6 +8,7 @@ import Html.Styled.Events as Events
 import Icons exposing (iconButtonStyles, trash2)
 
 
+marginForButtons : Px
 marginForButtons =
     px 40
 

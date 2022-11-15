@@ -4,7 +4,6 @@ import Expect
 import Fuzz
 import Identifiers exposing (notebookIdToString, parseNotebookId, wordGenerator)
 import Random
-import Regex
 import Test exposing (Test)
 import Tuple
 

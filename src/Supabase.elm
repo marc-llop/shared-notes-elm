@@ -1,4 +1,4 @@
-module Supabase exposing (..)
+module Supabase exposing (getSupabase, postSupabase, patchSupabase)
 
 import Http exposing (emptyBody, jsonBody, task)
 import Http.Tasks exposing (resolveJson)

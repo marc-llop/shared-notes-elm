@@ -7,7 +7,7 @@ module Icons exposing
 
 import Css exposing (..)
 import Html.Styled exposing (Html)
-import Html.Styled.Attributes exposing (css)
+import Html.Styled.Attributes
 import Svg.Styled exposing (Svg, svg)
 import Svg.Styled.Attributes as Attr exposing (d, points, x1, x2, y1, y2)
 
