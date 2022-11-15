@@ -1,9 +1,9 @@
-module ButtonView exposing (buttonView)
+module ButtonView exposing (buttonLinkView, buttonView)
 
 import Css exposing (..)
 import Html exposing (Html)
-import Html.Styled exposing (button, div, toUnstyled)
-import Html.Styled.Attributes exposing (attribute, css, title)
+import Html.Styled exposing (a, button, div, toUnstyled)
+import Html.Styled.Attributes as Attributes exposing (attribute, css, title)
 import Html.Styled.Events as Events
 import Icons exposing (iconButtonStyles)
 
@@ -64,3 +64,29 @@ buttonView { icon, onClick, description } =
             [ icon iconStyles ]
         ]
         |> toUnstyled
+
+
+linkStyles : List Style
+linkStyles =
+    [ marginTop (px 16)
+    , width (px 40)
+    ]
+
+
+buttonLinkView :
+    { icon : List Style -> Html.Styled.Html msg
+    , href : String
+    , description : String
+    }
+    -> Html.Styled.Html msg
+buttonLinkView { icon, href, description } =
+    div
+        [ css (divStyles ++ linkStyles) ]
+        [ a
+            [ css buttonStyles
+            , Attributes.href href
+            , attribute "aria-label" description
+            , title description
+            ]
+            [ icon iconStyles ]
+        ]

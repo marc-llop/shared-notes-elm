@@ -4,13 +4,17 @@ port module Main exposing (Model, Msg, Flags, main)
 
 import AutoTextarea exposing (autoTextarea)
 import Browser
-import ButtonView exposing (buttonView)
+import ButtonView exposing (buttonView, buttonLinkView)
 import Dict exposing (Dict)
 import Html exposing (Html, div, h1, span, text)
 import Html.Attributes exposing (class)
+import Html.Styled
+import Html.Styled.Attributes
 import Icons
 import Identifiers exposing (NotebookId, notebookIdToString, parseNotebookId)
 import Task
+import Css exposing (justifyContent)
+import Html.Styled exposing (toUnstyled)
 
 
 port updateLocation : String -> Cmd msg
@@ -142,6 +146,21 @@ noteView { note, onInput } =
         , placeholder = ""
         }
 
+buttonRow : Html msg
+buttonRow =
+    Html.Styled.div
+        [ Html.Styled.Attributes.css
+            [ Css.displayFlex
+            , Css.justifyContent Css.center
+            ]
+        ]
+        [ buttonLinkView 
+            { icon = Icons.github
+            , href = "https://github.com/marc-llop/shared-notes-elm"
+            , description = "GitHub"
+            }
+        ]
+    |> Html.Styled.toUnstyled
 
 openNotebook : NotebookId -> Notes -> Html Msg
 openNotebook notebookId notes =
@@ -153,7 +172,8 @@ openNotebook notebookId notes =
                 |> List.map (\note -> noteView { note = note, onInput = WriteNote })
     in
     div [ class "notebook" ]
-        [ span [ class "notebookId" ] [ text <| "Generated ID: " ++ notebookIdToString notebookId ]
+        [ span [ class "notebookId" ] [ text <| "Notebook " ++ notebookIdToString notebookId ]
+        , buttonRow
         , div [ class "notesList" ] notesList
         , buttonView { icon = Icons.plus, onClick = AddNote, description = "Add Note" }
         ]

@@ -37,7 +37,6 @@ body {
 .notebookScreen {
   display: flex;
   flex-direction: column;
-  gap: 20px;
   width: 70%;
   max-width: 800px;
   min-width: 500px;
