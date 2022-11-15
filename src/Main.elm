@@ -1,19 +1,19 @@
-port module Main exposing (Model, Msg, Flags, main)
+port module Main exposing (Flags, Model, Msg, main)
 
 -- import VitePluginHelper
 
 import AutoTextarea exposing (autoTextarea)
 import Browser
-import ButtonView exposing (buttonView, buttonLinkView)
+import ButtonView exposing (buttonLinkView, buttonView)
+import Css
 import Dict exposing (Dict)
 import Html
-import Html.Styled exposing (Html, div, h1, span, text)
+import Html.Styled exposing (Html, div, h1, span, text, toUnstyled)
 import Html.Styled.Attributes as Attributes exposing (class)
 import Icons
 import Identifiers exposing (NotebookId, notebookIdToString, parseNotebookId)
+import Spinner exposing (spinner)
 import Task
-import Css
-import Html.Styled exposing (toUnstyled)
 
 
 port updateLocation : String -> Cmd msg
@@ -125,18 +125,6 @@ update msg model =
             ( model, Cmd.none )
 
 
-
--- Styles defined in spinner.css
-
-
-spinner : Html msg
-spinner =
-    div [ class "lds-ripple" ]
-        [ div [] []
-        , div [] []
-        ]
-
-
 noteView : { note : Note, onInput : String -> String -> msg } -> Html msg
 noteView { note, onInput } =
     autoTextarea
@@ -144,6 +132,7 @@ noteView { note, onInput } =
         , onInput = onInput (Tuple.first note)
         , placeholder = ""
         }
+
 
 buttonRow : Html msg
 buttonRow =
@@ -153,12 +142,13 @@ buttonRow =
             , Css.justifyContent Css.center
             ]
         ]
-        [ buttonLinkView 
+        [ buttonLinkView
             { icon = Icons.github
             , href = "https://github.com/marc-llop/shared-notes-elm"
             , description = "GitHub"
             }
         ]
+
 
 openNotebook : NotebookId -> Notes -> Html Msg
 openNotebook notebookId notes =
