@@ -67,9 +67,6 @@ body {
   }
 }
 
-.notebookId {
-}
-
 .notebook {
   width: 100%;
 }
@@ -79,12 +76,4 @@ body {
   flex-direction: column;
   gap: 10px;
   margin: 16px;
-}
-
-a {
-  color: var(--color-action);
-}
-
-a:hover {
-  color: var(--color-action-hover);
 }
