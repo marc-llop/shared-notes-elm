@@ -2,7 +2,7 @@ module IdentifiersSpec exposing (suite)
 
 import Expect
 import Fuzz
-import Identifiers exposing (wordGenerator, notebookIdRegex)
+import Identifiers exposing (wordGenerator, parseNotebookId)
 import Random
 import Test exposing (Test)
 import Tuple
@@ -45,23 +45,23 @@ suite =
         , Test.describe "notebookIdRegex"
             [ Test.test "passes for correct IDs" <|
                 \_ ->
-                    Regex.contains notebookIdRegex "abcde-fghij-12345"
-                        |> Expect.true "Expected notebookIdRegex to recognise abcde-fghij-12345"
+                    parseNotebookId "abcde-fghij-12345"
+                        |> Expect.ok
             , Test.test "fails for incorrect IDs" <|
                 \_ ->
-                    Regex.contains notebookIdRegex "abce-fghij-12345"
-                        |> Expect.false "Expected notebookIdRegex to not recognise abce-fghij-12345"
+                    parseNotebookId "abce-fghij-12345"
+                        |> Expect.err
             , Test.test "fails for IDs with less parts" <|
                 \_ ->
-                    Regex.contains notebookIdRegex "abcde-12345"
-                        |> Expect.false "Expected notebookIdRegex to not recognise abcde-12345"
+                    parseNotebookId "abcde-12345"
+                        |> Expect.err
             , Test.test "fails for the empty ID" <|
                 \_ ->
-                    Regex.contains notebookIdRegex ""
-                        |> Expect.false "Expected notebookIdRegex to not recognise "
+                    parseNotebookId ""
+                        |> Expect.err
             , Test.test "fails for slash ID" <|
                 \_ ->
-                    Regex.contains notebookIdRegex "/"
-                        |> Expect.false "Expected notebookIdRegex to not recognise '/'"
+                    parseNotebookId "/"
+                        |> Expect.err
             ]
         ]

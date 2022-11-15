@@ -1,4 +1,4 @@
-module Identifiers exposing (NotebookId, notebookIdToString, generateNotebookId, wordGenerator, notebookIdRegex, parseNotebookId)
+module Identifiers exposing (NotebookId, notebookIdToString, generateNotebookId, wordGenerator, parseNotebookId)
 
 import Http
 import Http.Tasks
