@@ -21,5 +21,8 @@ const app = Elm.Main.init({
 })
 
 app.ports.updateLocation.subscribe(notebookId => {
-    location.replace(notebookId)
+    // Changes the URL .WITHOUT. causing a reload.
+    // Be aware that doing a reload could potentially cause an
+    // infinite loop if the notebookId parsing was broken.
+    window.history.replaceState(null, '', notebookId)
 })
