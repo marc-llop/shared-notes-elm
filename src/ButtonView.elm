@@ -1,8 +1,7 @@
 module ButtonView exposing (buttonLinkView, buttonView)
 
 import Css exposing (..)
-import Html exposing (Html)
-import Html.Styled exposing (a, button, div, toUnstyled)
+import Html.Styled exposing (Html, a, button, div, toUnstyled)
 import Html.Styled.Attributes as Attributes exposing (attribute, css, title)
 import Html.Styled.Events as Events
 import Icons exposing (iconButtonStyles)
@@ -63,7 +62,6 @@ buttonView { icon, onClick, description } =
             ]
             [ icon iconStyles ]
         ]
-        |> toUnstyled
 
 
 linkStyles : List Style

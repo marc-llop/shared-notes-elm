@@ -1,8 +1,7 @@
 module AutoTextarea exposing (autoTextarea)
 
 import Css exposing (..)
-import Html
-import Html.Styled exposing (button, div, text, textarea)
+import Html.Styled exposing (Html, button, div, text, textarea)
 import Html.Styled.Attributes as Attributes exposing (css)
 import Html.Styled.Events as Events
 import Icons exposing (iconButtonStyles, trash2)
@@ -82,7 +81,7 @@ autoTextarea :
     , onInput : String -> msg
     , placeholder : String
     }
-    -> Html.Html msg
+    -> Html msg
 autoTextarea { value, onInput, placeholder } =
     div [ css autoExpandStyles ]
         [ textarea
@@ -100,4 +99,3 @@ autoTextarea { value, onInput, placeholder } =
             ]
             [ trash2 ]
         ]
-        |> Html.Styled.toUnstyled

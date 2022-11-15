@@ -6,14 +6,13 @@ import AutoTextarea exposing (autoTextarea)
 import Browser
 import ButtonView exposing (buttonView, buttonLinkView)
 import Dict exposing (Dict)
-import Html exposing (Html, div, h1, span, text)
-import Html.Attributes exposing (class)
-import Html.Styled
-import Html.Styled.Attributes
+import Html
+import Html.Styled exposing (Html, div, h1, span, text)
+import Html.Styled.Attributes as Attributes exposing (class)
 import Icons
 import Identifiers exposing (NotebookId, notebookIdToString, parseNotebookId)
 import Task
-import Css exposing (justifyContent)
+import Css
 import Html.Styled exposing (toUnstyled)
 
 
@@ -94,7 +93,7 @@ main =
     Browser.element
         { init = init
         , update = update
-        , view = view
+        , view = \model -> view model |> Html.Styled.toUnstyled
         , subscriptions = \_ -> Sub.none
         }
 
@@ -148,8 +147,8 @@ noteView { note, onInput } =
 
 buttonRow : Html msg
 buttonRow =
-    Html.Styled.div
-        [ Html.Styled.Attributes.css
+    div
+        [ Attributes.css
             [ Css.displayFlex
             , Css.justifyContent Css.center
             ]
@@ -160,7 +159,6 @@ buttonRow =
             , description = "GitHub"
             }
         ]
-    |> Html.Styled.toUnstyled
 
 openNotebook : NotebookId -> Notes -> Html Msg
 openNotebook notebookId notes =
