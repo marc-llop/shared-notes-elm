@@ -1,6 +1,6 @@
 module Supabase exposing (..)
 
-import Http exposing (emptyBody, task, jsonBody)
+import Http exposing (emptyBody, jsonBody, task)
 import Http.Tasks exposing (resolveJson)
 import Json.Decode exposing (Decoder)
 import Json.Encode exposing (Value)
@@ -37,8 +37,9 @@ getSupabase { path, decoder } =
         , timeout = Nothing
         }
 
-postSupabase : { path : String, body: Value, decoder: Decoder a } -> Task Http.Error a
-postSupabase {path, body, decoder} =
+
+postSupabase : { path : String, body : Value, decoder : Decoder a } -> Task Http.Error a
+postSupabase { path, body, decoder } =
     task
         { method = "POST"
         , headers = headers
@@ -48,8 +49,9 @@ postSupabase {path, body, decoder} =
         , timeout = Nothing
         }
 
-patchSupabase : { path : String, body: Value, decoder: Decoder a } -> Task Http.Error a
-patchSupabase {path, body, decoder} =
+
+patchSupabase : { path : String, body : Value, decoder : Decoder a } -> Task Http.Error a
+patchSupabase { path, body, decoder } =
     task
         { method = "PATCH"
         , headers = headers

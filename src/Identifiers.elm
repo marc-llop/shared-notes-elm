@@ -1,49 +1,85 @@
-module Identifiers exposing (NotebookId, notebookIdToString, generateNotebookId, wordGenerator, parseNotebookId)
+module Identifiers exposing (NotebookId, generateNotebookId, notebookIdToString, parseNotebookId, wordGenerator)
 
+import Html.Attributes exposing (id)
 import Http
 import Http.Tasks
 import Json.Decode as Decode exposing (Decoder)
-import Random exposing (Generator)
+import Random exposing (Generator, Seed)
 import Random.Char
 import Random.Extra
 import Random.String
+import Regex
 import Task exposing (Task)
 import Time
-import Random exposing (Seed)
-import Html.Attributes exposing (id)
-import Regex
 
--- Identifies a Notebook. It renders as three dash-separated five-letter strings,
--- like dizzy-pacas-a6f87.
-type NotebookId = NotebookId String
+
+{-| Identifies a Notebook. It renders as three dash-separated five-letter strings,
+like dizzy-pacas-a6f87.
+-}
+type NotebookId
+    = NotebookId String
+
 
 notebookIdFromWords : String -> String -> String -> NotebookId
-notebookIdFromWords a b c = NotebookId <| String.join "-" [a, b, c]
+notebookIdFromWords a b c =
+    NotebookId <| String.join "-" [ a, b, c ]
 
+
+{-| Prints the NotebookId as a string that is safe for URLs and safe for
+parsing back to a NotebookId.
+
+    parseNotebookId "hello-there-12345"
+        |> Result.map notebookIdToString
+        |> Result.withDefault ""
+
+    -- "hello-there-12345"
+
+-}
 notebookIdToString : NotebookId -> String
-notebookIdToString (NotebookId a) = a
+notebookIdToString (NotebookId a) =
+    a
 
--- Length in characters of the shortIds that compose NotebookIds
+
+{-| Length in characters of the shortIds that compose NotebookIds.
+-}
 idWordLength : Int
-idWordLength = 5
+idWordLength =
+    5
+
 
 wordSubRegex : String
-wordSubRegex = "[a-z0-9]{" ++ String.fromInt idWordLength ++ "}"
+wordSubRegex =
+    "[a-z0-9]{" ++ String.fromInt idWordLength ++ "}"
+
 
 notebookIdRegex : Regex.Regex
-notebookIdRegex = 
-    ["^", wordSubRegex, "-", wordSubRegex, "-", wordSubRegex, "$"]
+notebookIdRegex =
+    [ "^", wordSubRegex, "-", wordSubRegex, "-", wordSubRegex, "$" ]
         |> String.join ""
         |> Regex.fromString
         |> Maybe.withDefault Regex.never
 
--- Tries to parse a NotebookId. Valid NotebookIds are composed of three words
--- of 5 characters (a-z lowercase and 0-9) divided by "-".
+
+{-| Tries to parse a NotebookId. Valid NotebookIds are composed of three words
+of 5 characters (a-z lowercase and 0-9) divided by "-".
+
+    parseNotebookId "hello-there-12345"
+
+    -- Ok NotebookId
+
+    parseNotebookId "invalid-id-1234"
+
+    -- Err "Tried to create an invalid notebookId: invalid-id-1234"
+
+-}
 parseNotebookId : String -> Result String NotebookId
-parseNotebookId str = 
-    if Regex.contains notebookIdRegex str
-        then Ok (NotebookId str)
-        else Err ("Tried to create an invalid notebookId: " ++ str)
+parseNotebookId str =
+    if Regex.contains notebookIdRegex str then
+        Ok (NotebookId str)
+
+    else
+        Err ("Tried to create an invalid notebookId: " ++ str)
+
 
 wordsDecoder : Decoder ( String, String )
 wordsDecoder =
@@ -66,8 +102,15 @@ requestTwoWords =
         , resolver = Http.Tasks.resolveJson wordsDecoder
         }
 
+
+
 -- Auxiliary Error type that allows mixing (Task x a) with (Task Http.Error a)
-type Error = Http Http.Error | None
+
+
+type Error
+    = Http Http.Error
+    | None
+
 
 {-| Generates a notebook ID of the form xxxxx-xxxxx-xxxxx (three words
 of five lowercase alphanumeric characters separated by hyphens).
@@ -82,19 +125,21 @@ generateNotebookId : Int -> Task x NotebookId
 generateNotebookId randomSeed =
     let
         initialSeed : Seed
-        initialSeed = Random.initialSeed randomSeed
+        initialSeed =
+            Random.initialSeed randomSeed
 
         generateThreeShortIds : Seed -> Task x NotebookId
         generateThreeShortIds shortIds =
-            generateNextShortId (notebookIdFromWords, initialSeed)
-                |> Task.andThen (generateNextShortId)
-                |> Task.andThen (generateNextShortId)
-                |> Task.map (Tuple.first)
+            generateNextShortId ( notebookIdFromWords, initialSeed )
+                |> Task.andThen generateNextShortId
+                |> Task.andThen generateNextShortId
+                |> Task.map Tuple.first
 
-        appendGeneratedId : (String, String) -> Task Error NotebookId
-        appendGeneratedId (a, b) = generateShortId initialSeed
-            |> Task.map (\(c, _) -> notebookIdFromWords a b c)
-            |> Task.mapError (\_ -> None)
+        appendGeneratedId : ( String, String ) -> Task Error NotebookId
+        appendGeneratedId ( a, b ) =
+            generateShortId initialSeed
+                |> Task.map (\( c, _ ) -> notebookIdFromWords a b c)
+                |> Task.mapError (\_ -> None)
     in
     -- Attempt to get two real words from an API, because it gives readable and nice IDs, and one random word.
     requestTwoWords
@@ -104,19 +149,31 @@ generateNotebookId randomSeed =
         |> Task.onError (\_ -> generateThreeShortIds initialSeed)
 
 
-generateShortId : Seed -> Task x (String, Seed)
+generateShortId : Seed -> Task x ( String, Seed )
 generateShortId randomSeed =
     Time.now
-        |> Task.map (\_ -> Random.step wordGenerator randomSeed
-            |> \(shortId, nextSeed) -> (shortId, nextSeed)
-        )
+        |> Task.map
+            (\_ ->
+                Random.step wordGenerator randomSeed
+                    |> (\( shortId, nextSeed ) -> ( shortId, nextSeed ))
+            )
 
-generateNextShortId : (String -> a, Seed) -> Task x (a, Seed)
-generateNextShortId (shortIds, randomSeed) =
+
+generateNextShortId : ( String -> a, Seed ) -> Task x ( a, Seed )
+generateNextShortId ( shortIds, randomSeed ) =
     generateShortId randomSeed
-        |> Task.map (\(generatedId, nextSeed) -> (shortIds generatedId, nextSeed))
+        |> Task.map (\( generatedId, nextSeed ) -> ( shortIds generatedId, nextSeed ))
 
 
+{-| Random generator that generates alphanumeric words of length 5.
+
+    Random.initialSeed 1
+        |> Random.step wordGenerator
+        |> Tuple.first
+
+    -- "on3ym"
+
+-}
 wordGenerator : Generator String
 wordGenerator =
     Random.String.string idWordLength alphanumericGenerator

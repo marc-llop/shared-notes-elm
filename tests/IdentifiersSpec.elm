@@ -2,11 +2,11 @@ module IdentifiersSpec exposing (suite)
 
 import Expect
 import Fuzz
-import Identifiers exposing (wordGenerator, parseNotebookId)
+import Identifiers exposing (notebookIdToString, parseNotebookId, wordGenerator)
 import Random
+import Regex
 import Test exposing (Test)
 import Tuple
-import Regex
 
 
 generateWord : Int -> String
@@ -63,5 +63,13 @@ suite =
                 \_ ->
                     parseNotebookId "/"
                         |> Expect.err
+            ]
+        , Test.describe "parseNotebookId"
+            [ Test.test "should be the inverse of notebookIdToString" <|
+                \_ ->
+                    parseNotebookId "hello-there-12345"
+                        |> Result.map notebookIdToString
+                        |> Result.withDefault ""
+                        |> Expect.equal "hello-there-12345"
             ]
         ]

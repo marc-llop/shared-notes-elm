@@ -46,12 +46,13 @@ iconStyles =
     ]
 
 
-buttonView : 
+buttonView :
     { icon : List Style -> Html.Styled.Html msg
     , onClick : msg
     , description : String
-    } -> Html msg
-buttonView {icon, onClick, description} =
+    }
+    -> Html msg
+buttonView { icon, onClick, description } =
     div
         [ css divStyles ]
         [ button

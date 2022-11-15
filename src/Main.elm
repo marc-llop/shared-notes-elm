@@ -4,16 +4,17 @@ port module Main exposing (Model, Msg, main)
 
 import AutoTextarea exposing (autoTextarea)
 import Browser
+import ButtonView exposing (buttonView)
 import Dict exposing (Dict)
 import Html exposing (Html, div, h1, span, text)
 import Html.Attributes exposing (class)
 import Html.Events exposing (onInput)
-import Identifiers exposing (NotebookId, parseNotebookId, notebookIdToString)
-import Task
-import ButtonView exposing (buttonView)
 import Icons
+import Identifiers exposing (NotebookId, notebookIdToString, parseNotebookId)
 import Json.Decode as Decode
 import Regex
+import Task
+
 
 port updateLocation : String -> Cmd msg
 
@@ -53,10 +54,13 @@ exampleNotes =
     ]
         |> Dict.fromList
 
-type alias Flags = {path : String, randomSeed: Int}
+
+type alias Flags =
+    { path : String, randomSeed : Int }
+
 
 init : Flags -> ( Model, Cmd Msg )
-init {path, randomSeed} =
+init { path, randomSeed } =
     let
         newNotebook : ( Model, Cmd Msg )
         newNotebook =
@@ -117,7 +121,8 @@ update msg model =
             , Cmd.none
             )
 
-        AddNote -> (model, Cmd.none)
+        AddNote ->
+            ( model, Cmd.none )
 
 
 
