@@ -1,20 +1,23 @@
 module Supabase exposing (getSupabase, postSupabase, patchSupabase)
 
-import Http exposing (emptyBody, jsonBody, task)
+import Http exposing (emptyBody, jsonBody, task, header)
 import Http.Tasks exposing (resolveJson)
 import Json.Decode exposing (Decoder)
 import Json.Encode exposing (Value)
 import Task exposing (Task)
 
+clientKey : String
+clientKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFrZ3dvZ3ppdHJvcXNrZG1nd3FqIiwicm9sZSI6ImFub24iLCJpYXQiOjE2Njg2MTg2MDksImV4cCI6MTk4NDE5NDYwOX0.9GQWV1W8wR5vZgIcgr1wSCIGOeC5poAgQdQLNX83bQI"
 
 headers : List Http.Header
 headers =
-    []
+    [ header "apikey" clientKey
+    ]
 
 
 supabaseUrl : String
 supabaseUrl =
-    ""
+    "https://akgwogzitroqskdmgwqj.supabase.co/rest/v1/"
 
 
 endpoint : String -> String
@@ -42,7 +45,7 @@ postSupabase : { path : String, body : Value, decoder : Decoder a } -> Task Http
 postSupabase { path, body, decoder } =
     task
         { method = "POST"
-        , headers = headers
+        , headers = headers ++ [ header "Prefer" "return=representation" ]
         , url = endpoint path
         , body = jsonBody body
         , resolver = resolveJson decoder
@@ -54,7 +57,7 @@ patchSupabase : { path : String, body : Value, decoder : Decoder a } -> Task Htt
 patchSupabase { path, body, decoder } =
     task
         { method = "PATCH"
-        , headers = headers
+        , headers = headers ++ [ header "Prefer" "return=representation" ]
         , url = endpoint path
         , body = jsonBody body
         , resolver = resolveJson decoder

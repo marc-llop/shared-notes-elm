@@ -14,6 +14,8 @@ import Icons
 import Identifiers exposing (NotebookId, notebookIdToString, parseNotebookId)
 import Spinner exposing (spinner)
 import Task
+import Http
+import Notebook exposing (insertNotebook)
 
 
 port updateLocation : String -> Cmd msg
@@ -100,6 +102,7 @@ main =
 
 type Msg
     = IdGenerated NotebookId
+    | NotebookStored (Result Http.Error NotebookId)
     | WriteNote String String
     | AddNote
 
@@ -108,7 +111,14 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         IdGenerated notebookId ->
-            ( NotebookOpen notebookId exampleNotes, updateLocation (notebookIdToString notebookId) )
+            ( NotebookOpen notebookId exampleNotes
+            , Cmd.batch
+                [ updateLocation (notebookIdToString notebookId)
+                , Task.attempt NotebookStored (insertNotebook notebookId)
+                ]
+            )
+
+        NotebookStored _ -> (model, Cmd.none)
 
         WriteNote noteId value ->
             ( case model of
