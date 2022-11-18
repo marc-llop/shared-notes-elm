@@ -8,7 +8,7 @@ import ButtonView exposing (buttonLinkView, buttonView)
 import Css
 import Dict exposing (Dict)
 import Html
-import Html.Styled exposing (Html, div, h1, span, text, toUnstyled)
+import Html.Styled exposing (Html, div, h1, span, text, toUnstyled, p, b)
 import Html.Styled.Attributes as Attributes exposing (class)
 import Icons
 import Identifiers exposing (NotebookId, notebookIdToString, parseNotebookId)
@@ -170,7 +170,9 @@ openNotebook notebookId notes =
                 |> List.map (\note -> noteView { note = note, onInput = WriteNote })
     in
     div [ class "notebook" ]
-        [ span [ class "notebookId" ] [ text <| "Notebook " ++ notebookIdToString notebookId ]
+        [ span [] [ text <| notebookIdToString notebookId ]
+        , p [] [ b [] [ text "Warning: " ] , text "All notebooks are PUBLIC." ]
+        , p [] [ text "Be mindful of what you write here. Never write any personal information, passwords, or any information you want to protect." ]
         , buttonRow
         , div [ class "notesList" ] notesList
         , buttonView { icon = Icons.plus, onClick = AddNote, description = "Add Note" }

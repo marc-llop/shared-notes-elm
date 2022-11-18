@@ -47,8 +47,8 @@ body {
 @media (max-width: 500px) {
   .notebookScreen {
     width: 100%;
-    min-width: 100%;
-    margin: 0 8px;
+    min-width: calc(100% - 32px);
+    margin: 0 16px;
   }
 }
 
@@ -74,5 +74,5 @@ body {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  margin: 16px;
+  margin-bottom: 16px;
 }
