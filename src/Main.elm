@@ -36,23 +36,11 @@ type Model
 
 exampleNotes : Notes
 exampleNotes =
-    [ ( "1", "Això és una nota" )
-    , ( "2", "Això és una altra nota" )
-    , ( "3", "Això és una altra nota" )
-    , ( "4", "Això és una altra nota" )
-    , ( "5", "Això és una altra nota" )
-    , ( "6", "Això és una altra nota" )
-    , ( "7", "Això és una altra nota" )
-    , ( "8", "Això és una altra nota" )
-    , ( "9", "Això és una altra nota" )
-    , ( "21", "Això és una altra nota" )
-    , ( "22", "Això és una altra nota" )
-    , ( "23", "Això és una altra nota" )
-    , ( "24", "Això és una altra nota" )
-    , ( "25", "Això és una altra nota" )
-    , ( "26", "Això és una altra nota" )
-    , ( "27", "Això és una altra nota" )
-    , ( "28", "Nota final" )
+    [ ( "1", "Store model in localStorage as well so it can be started offline." )
+    , ( "2", "Merge a notebook's notes in a non-destructive way whenever a content conflict is detected after downloading a note." )
+    , ( "3", "Make notes automatically synchronized by using supabase client's real-time API on a JS port." )
+    , ( "4", "Make note deletion undoable." )
+    , ( "5", "Debounce database updates." )
     ]
         |> Dict.fromList
 
