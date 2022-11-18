@@ -1,40 +1,30 @@
-# Vite Elm Template
+# Elm Shared Notes
 
-[![ci](https://github.com/lindsaykwardell/vite-elm-template/actions/workflows/ci.yml/badge.svg)](https://github.com/lindsaykwardell/vite-elm-template/actions/workflows/ci.yml)
-[![Gitpod ready-to-code](https://img.shields.io/badge/Gitpod-ready--to--code-908a85?logo=gitpod)](https://gitpod.io/#https://github.com/lindsaykwardell/vite-elm-template)
+A real-time collaborative offline-first notebook written in Elm.
 
-A default template for building Elm applications using Vite. Includes hot-module reload of Elm modules (courtesy of `vite-plugin-elm`).
+Features:
 
-> Vite (French word for "fast", pronounced /vit/) is a build tool that aims to provide a faster and leaner development experience for modern web projects.
+- [ ] Shareable rooms (a.k.a. notebooks).
+- [x] Automatic notebook creation on enter.
+- [x] Human-friendly unique notebook IDs.
+- [x] Add, update and delete notes.
+- [x] Sleek design (it looks cooler than I expected).
+- [ ] Notes are stored in the cloud.
+- [ ] Notes are also stored in the browser.
+- [ ] Notes are duplicated on conflict.
+- [ ] Real-time multi-user edition of notes.
+- [ ] Undoable note deletion.
+- [ ] Optimised requests.
 
-> Elm is a functional language that compiles to JavaScript. It helps you make websites and web apps. It has a strong emphasis on simplicity and quality tooling.
+![screenshot with notes states](./readme/screenshot1.png) ![screenshot with selected text](./readme/screenshot2.png) ![screenshot with text overlapping gradient](./readme/screenshot3.png)
 
-Live demo site: https://vite-elm-template.netlify.app/
 
-## Features
+## Stack
 
-- [Hot Module Reload](https://github.com/hmsk/vite-plugin-elm) of all code in the app (including Elm)
-- [Integration with Vite static asset handling](https://package.elm-lang.org/packages/hmsk/elm-vite-plugin-helper/latest/)
-- Tooling installation via [elm-tooling](https://elm-tooling.github.io/elm-tooling-cli/)
-  - Includes Elm, elm-format, elm-json, and elm-test-rs
-- Basic unit test and [elm-review](https://package.elm-lang.org/packages/jfmengels/elm-review/latest/) examples
-- Github Actions CI for running tests
-- Recommends the [Elm VS Code extension](https://marketplace.visualstudio.com/items?itemName=Elmtooling.elm-ls-vscode)
+Serverless Elm client app. Uses Supabase as a DB.
 
-For a single page app (SPA) version of this template, check out [`vite-elm-spa`](https://github.com/lindsaykwardell/vite-elm-spa)
+Uses Supabase JS client for the real-time updates.
 
-## Get Started
+Expedited with [vite-elm-template](https://github.com/lindsaykwardell/vite-elm-template).
 
-```bash
-# Clone the template locally, removing the template's Git log
-npx tiged lindsaykwardell/vite-elm-template my-elm-app
-
-# Enter the project, install dependencies, and get started!
-cd my-elm-app
-npm install
-npm run dev
-```
-
-For more information about Vite, check out [Vite's official documentation.](https://vitejs.dev/)
-
-To learn more about Elm, check out [Elm's official homepage](https://elm-lang.org/).
+See package.json scripts. For more information about Vite, check out [Vite's official documentation.](https://vitejs.dev/).
