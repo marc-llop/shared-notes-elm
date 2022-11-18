@@ -16,7 +16,11 @@ Features:
 - [ ] Undoable note deletion.
 - [ ] Optimised requests.
 
-![screenshot with notes states](./readme/screenshot1.png) ![screenshot with selected text](./readme/screenshot2.png) ![screenshot with text overlapping gradient](./readme/screenshot3.png)
+<p align="center">
+  <img width="25%" src="./readme/screenshot1.png" alt="screenshot with notes states" />
+  <img width="25%" src="./readme/screenshot2.png" alt="screenshot with selected text" />
+  <img width="28%" src="./readme/screenshot3.png" alt="screenshot with text overlapping gradient" />
+</p>
 
 
 ## Stack
