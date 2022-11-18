@@ -76,3 +76,8 @@ body {
   gap: 10px;
   margin-bottom: 16px;
 }
+
+textarea::selection {
+  color: #050010;
+  background-color: var(--color-handle-hover);
+}
