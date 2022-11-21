@@ -8,14 +8,14 @@ import ButtonView exposing (buttonLinkView, buttonView)
 import Css
 import Dict exposing (Dict)
 import Html
-import Html.Styled exposing (Html, div, h1, span, text, toUnstyled, p, b)
+import Html.Styled exposing (Html, b, div, h1, p, span, text, toUnstyled)
 import Html.Styled.Attributes as Attributes exposing (class)
+import Http
 import Icons
 import Identifiers exposing (NotebookId, notebookIdToString, parseNotebookId)
+import Notebook exposing (insertNotebook)
 import Spinner exposing (spinner)
 import Task
-import Http
-import Notebook exposing (insertNotebook)
 
 
 port updateLocation : String -> Cmd msg
@@ -41,6 +41,7 @@ exampleNotes =
     , ( "3", "Make notes automatically synchronized by using supabase client's real-time API on a JS port." )
     , ( "4", "Make note deletion undoable." )
     , ( "5", "Debounce database updates." )
+    , ( "6", "Regenerate notebook ID upon primary key constraint violation on insert." )
     ]
         |> Dict.fromList
 
@@ -106,7 +107,8 @@ update msg model =
                 ]
             )
 
-        NotebookStored _ -> (model, Cmd.none)
+        NotebookStored _ ->
+            ( model, Cmd.none )
 
         WriteNote noteId value ->
             ( case model of
@@ -159,7 +161,7 @@ openNotebook notebookId notes =
     in
     div [ class "notebook" ]
         [ span [] [ text <| notebookIdToString notebookId ]
-        , p [] [ b [] [ text "Warning: " ] , text "All notebooks are PUBLIC." ]
+        , p [] [ b [] [ text "Warning: " ], text "All notebooks are PUBLIC." ]
         , p [] [ text "Be mindful of what you write here. Never write any personal information, passwords, or any information you want to protect." ]
         , buttonRow
         , div [ class "notesList" ] notesList

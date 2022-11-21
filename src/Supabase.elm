@@ -1,13 +1,16 @@
-module Supabase exposing (getSupabase, postSupabase, patchSupabase)
+module Supabase exposing (getSupabase, patchSupabase, postSupabase)
 
-import Http exposing (emptyBody, jsonBody, task, header)
+import Http exposing (emptyBody, header, jsonBody, task)
 import Http.Tasks exposing (resolveJson)
 import Json.Decode exposing (Decoder)
 import Json.Encode exposing (Value)
 import Task exposing (Task)
 
+
 clientKey : String
-clientKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFrZ3dvZ3ppdHJvcXNrZG1nd3FqIiwicm9sZSI6ImFub24iLCJpYXQiOjE2Njg2MTg2MDksImV4cCI6MTk4NDE5NDYwOX0.9GQWV1W8wR5vZgIcgr1wSCIGOeC5poAgQdQLNX83bQI"
+clientKey =
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFrZ3dvZ3ppdHJvcXNrZG1nd3FqIiwicm9sZSI6ImFub24iLCJpYXQiOjE2Njg2MTg2MDksImV4cCI6MTk4NDE5NDYwOX0.9GQWV1W8wR5vZgIcgr1wSCIGOeC5poAgQdQLNX83bQI"
+
 
 headers : List Http.Header
 headers =

@@ -102,7 +102,6 @@ requestTwoWords =
         }
 
 
-
 {-| Auxiliary Error type that allows mixing (Task x a) with (Task Http.Error a)
 -}
 type Error
