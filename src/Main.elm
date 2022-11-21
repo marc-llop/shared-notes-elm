@@ -10,6 +10,7 @@ import Dict exposing (Dict)
 import Html
 import Html.Styled exposing (Html, b, div, h1, p, span, text, toUnstyled)
 import Html.Styled.Attributes as Attributes exposing (class)
+import Html.Styled.Keyed as Keyed
 import Http
 import Icons
 import Identifiers exposing (NotebookId, notebookIdToString, parseNotebookId)
@@ -125,13 +126,15 @@ update msg model =
             ( model, Cmd.none )
 
 
-noteView : { note : Note, onInput : String -> String -> msg } -> Html msg
+noteView : { note : Note, onInput : String -> String -> msg } -> ( String, Html msg )
 noteView { note, onInput } =
-    autoTextarea
+    ( Tuple.first note
+    , autoTextarea
         { value = Tuple.second note
         , onInput = onInput (Tuple.first note)
         , placeholder = ""
         }
+    )
 
 
 buttonRow : Html msg
@@ -153,7 +156,7 @@ buttonRow =
 openNotebook : NotebookId -> Notes -> Html Msg
 openNotebook notebookId notes =
     let
-        notesList : List (Html Msg)
+        notesList : List ( String, Html Msg )
         notesList =
             Dict.toList notes
                 |> List.sortBy (Tuple.first >> String.toInt >> Maybe.withDefault 0)
@@ -164,7 +167,7 @@ openNotebook notebookId notes =
         , p [] [ b [] [ text "Warning: " ], text "All notebooks are PUBLIC." ]
         , p [] [ text "Be mindful of what you write here. Never write any personal information, passwords, or any information you want to protect." ]
         , buttonRow
-        , div [ class "notesList" ] notesList
+        , Keyed.ul [ class "notesList" ] notesList
         , buttonView { icon = Icons.plus, onClick = AddNote, description = "Add Note" }
         ]
 
