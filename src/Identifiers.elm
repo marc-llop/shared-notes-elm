@@ -1,4 +1,4 @@
-module Identifiers exposing (NotebookId, generateNotebookId, notebookIdToString, parseNotebookId, wordGenerator)
+module Identifiers exposing (NotebookId, generateNextShortId, generateNotebookId, notebookIdToString, parseNotebookId, wordGenerator)
 
 import Http
 import Http.Tasks
@@ -156,6 +156,15 @@ generateShortId randomSeed =
             )
 
 
+{-| Given a random seed and a string constructor, returns a Task that will
+result in the new entity and the next seed.
+
+    type MyId = MyId String
+
+    generateNextShortId (MyId, model.seed)
+        |> Task.andThen (\(myId, newSeed) -> ...)
+
+-}
 generateNextShortId : ( String -> a, Seed ) -> Task x ( a, Seed )
 generateNextShortId ( shortIds, randomSeed ) =
     generateShortId randomSeed
