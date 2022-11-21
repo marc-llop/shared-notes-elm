@@ -32,6 +32,15 @@ endpoint path =
         supabaseUrl ++ "/" ++ path
 
 
+{-| Read rows of a table. Path should contain any
+PostgREST filters you want applied.
+
+    getSupabase
+        { path = "notes?id=eq.1&select=some_column,other_table(foreign_key)"
+        , decoder = noteListDecoder
+        }
+
+-}
 getSupabase : { path : String, decoder : Decoder a } -> Task Http.Error a
 getSupabase { path, decoder } =
     task
@@ -44,6 +53,15 @@ getSupabase { path, decoder } =
         }
 
 
+{-| Insert one or many rows in a table.
+
+    postSupabase
+        { path = "notes"
+        , body = encodeNote note
+        , decoder = noteDecoder
+        }
+
+-}
 postSupabase : { path : String, body : Value, decoder : Decoder a } -> Task Http.Error a
 postSupabase { path, body, decoder } =
     task
@@ -56,6 +74,17 @@ postSupabase { path, body, decoder } =
         }
 
 
+{-| Upsert several rows in a table (insert them
+and in case of any collision by "id", update the
+already existing rows).
+
+    upsertSupabase
+        { path = "notes"
+        , body = encodeNoteList notes
+        , decoder = nodeListDecoder
+        }
+
+-}
 upsertSupabase : { path : String, body : Value, decoder : Decoder a } -> Task Http.Error a
 upsertSupabase { path, body, decoder } =
     task
@@ -67,6 +96,16 @@ upsertSupabase { path, body, decoder } =
         , timeout = Nothing
         }
 
+
+{-| Updates all matching rows. You can filter affected rows with path.
+
+    patchSupabase
+        { path = "notes?id=eq.1"
+        , body = encodeNote updatedNote
+        , decoder = noteDecoder
+        }
+
+-}
 patchSupabase : { path : String, body : Value, decoder : Decoder a } -> Task Http.Error a
 patchSupabase { path, body, decoder } =
     task
