@@ -90,7 +90,12 @@ autoTextarea { value, onInput, placeholder } =
             , Attributes.placeholder placeholder
             ]
             [ text value ]
-        , div [ css divStyles ] [ text (value ++ "_") ]
+        , div
+            [ css divStyles
+            , Attributes.attribute "aria-hidden" "true"
+            , Attributes.tabindex -1
+            ]
+            [ text (value ++ "_") ]
         , button
             [ css deleteButtonStyles
             , Events.onClick (onInput value)
