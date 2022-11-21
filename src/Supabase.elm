@@ -1,8 +1,8 @@
-module Supabase exposing (getSupabase, patchSupabase, postSupabase)
+module Supabase exposing (getSupabase, patchSupabase, postSupabase, singletonDecoder)
 
 import Http exposing (emptyBody, header, jsonBody, task)
 import Http.Tasks exposing (resolveJson)
-import Json.Decode exposing (Decoder)
+import Json.Decode as Decode exposing (Decoder)
 import Json.Encode exposing (Value)
 import Task exposing (Task)
 
@@ -66,3 +66,28 @@ patchSupabase { path, body, decoder } =
         , resolver = resolveJson decoder
         , timeout = Nothing
         }
+
+
+maybeToDecoder : String -> Maybe a -> Decoder a
+maybeToDecoder err maybeVal =
+    case maybeVal of
+        Just val ->
+            Decode.succeed val
+
+        Nothing ->
+            Decode.fail err
+
+
+{-| Given a Decoder x, returns a new decoder that
+decodes a List x and returns only the first item,
+and fails in case of empty list.
+
+    decodeString (singletonDecoder Decode.int) "[1, 2]" == Ok 1
+
+    decodeString (singletonDecoder Decode.int) "[]" == Err "Unexpected empty list"
+
+-}
+singletonDecoder : Decoder a -> Decoder a
+singletonDecoder decoder =
+    Decode.list decoder
+        |> Decode.andThen (List.head >> maybeToDecoder "Unexpected empty list while decoding")

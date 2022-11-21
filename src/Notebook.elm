@@ -4,7 +4,7 @@ import Http
 import Identifiers exposing (NotebookId, notebookIdToString, parseNotebookId)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
-import Supabase exposing (postSupabase)
+import Supabase exposing (postSupabase, singletonDecoder)
 import Task exposing (Task)
 
 
@@ -30,16 +30,6 @@ resultToDecoder res =
             Decode.fail message
 
 
-maybeToDecoder : String -> Maybe a -> Decoder a
-maybeToDecoder err maybeVal =
-    case maybeVal of
-        Just val ->
-            Decode.succeed val
-
-        Nothing ->
-            Decode.fail err
-
-
 {-| Decodes a Notebook object to its notebookId.
 
     decodeString notebookIdDecoder "{\"id\": \"hello\"}" == Ok "hello"
@@ -55,15 +45,17 @@ notebookIdDecoder =
 
     decodeString firstNotebookIdDecoder "[{\"id\": \"hello\"}]" == Ok "hello"
 
-    decodeString firstNotebookIdDecoder "[]" == Err "Unexpected empty response"
+    decodeString firstNotebookIdDecoder "[]" == Err "Unexpected empty list"
 
 -}
 firstNotebookIdDecoder : Decoder NotebookId
 firstNotebookIdDecoder =
-    Decode.list notebookIdDecoder
-        |> Decode.andThen (List.head >> maybeToDecoder "Unexpected empty response")
+    singletonDecoder notebookIdDecoder
 
 
+{-| Inserts a new notebook with this ID in a remote database.
+Fails if a notebook with this ID already exists.
+-}
 insertNotebook : NotebookId -> Task Http.Error NotebookId
 insertNotebook notebookId =
     postSupabase
