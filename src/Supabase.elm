@@ -56,6 +56,17 @@ postSupabase { path, body, decoder } =
         }
 
 
+upsertSupabase : { path : String, body : Value, decoder : Decoder a } -> Task Http.Error a
+upsertSupabase { path, body, decoder } =
+    task
+        { method = "POST"
+        , headers = headers ++ [ header "Prefer" "resolution=merge-duplicates" ]
+        , url = endpoint path
+        , body = jsonBody body
+        , resolver = resolveJson decoder
+        , timeout = Nothing
+        }
+
 patchSupabase : { path : String, body : Value, decoder : Decoder a } -> Task Http.Error a
 patchSupabase { path, body, decoder } =
     task
