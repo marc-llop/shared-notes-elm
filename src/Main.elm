@@ -105,7 +105,7 @@ type Msg
     | WriteNote String String
     | AddNote
     | NoteCreated ClientOnlyNote Random.Seed
-    | NoteStored (Result Http.Error StoredNote)
+    | NoteStored ClientOnlyNote (Result Http.Error StoredNote)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -165,11 +165,38 @@ update msg model =
                             NotebookOpen nId (Dict.insert noteId newNote notes)
                     in
                     ( { randomSeed = newSeed, app = newApp }
-                    , Task.attempt NoteStored (Note.insertNote nId note)
+                    , Task.attempt (NoteStored note) (Note.insertNote nId note)
                     )
 
-        NoteStored result ->
-            Debug.todo "Update note in dict with new ID"
+        NoteStored oldNote result ->
+            case ( result, model.app ) of
+                ( _, OpeningNewNotebook ) ->
+                    ( model, Cmd.none )
+
+                ( Ok storedNote, NotebookOpen nId notes ) ->
+                    ( { model
+                        | app = NotebookOpen nId (changeNoteId oldNote storedNote notes)
+                      }
+                    , Cmd.none
+                    )
+
+                ( Err _, NotebookOpen _ _ ) ->
+                    ( model, Cmd.none )
+
+
+changeNoteId : ClientOnlyNote -> StoredNote -> Dict String Note -> Dict String Note
+changeNoteId oldNote storedNote notes =
+    let
+        note : Note
+        note =
+            Stored storedNote
+
+        oldId : String
+        oldId =
+            noteIdString (ClientOnly oldNote)
+    in
+    Dict.remove oldId notes
+        |> Dict.insert (noteIdString note) note
 
 
 buttonRow : Html msg
