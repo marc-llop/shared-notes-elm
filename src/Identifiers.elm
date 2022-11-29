@@ -1,4 +1,4 @@
-module Identifiers exposing (NotebookId, generateNextShortId, generateNotebookId, generateShortId, notebookIdToString, parseNotebookId, wordGenerator)
+module Identifiers exposing (NotebookId, generateNotebookId, generateShortId, notebookIdToString, parseNotebookId, wordGenerator)
 
 import Http
 import Http.Tasks
@@ -9,7 +9,6 @@ import Random.Extra
 import Random.String
 import Regex
 import Task exposing (Task)
-import Time
 
 
 {-| Identifies a Notebook. It renders as three dash-separated five-letter strings,
@@ -159,12 +158,7 @@ generateNotebookId msg randomSeed =
 
 generateShortIdTask : Seed -> Task x ( String, Seed )
 generateShortIdTask randomSeed =
-    Time.now
-        |> Task.map
-            (\_ ->
-                Random.step wordGenerator randomSeed
-                    |> (\( shortId, nextSeed ) -> ( shortId, nextSeed ))
-            )
+    Task.succeed (Random.step wordGenerator randomSeed)
 
 
 {-| Given a random seed, returns a Cmd that will result in
