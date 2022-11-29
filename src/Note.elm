@@ -56,8 +56,7 @@ updateNoteText str note =
 encodeClientNote : NotebookId -> ClientOnlyNote -> Value
 encodeClientNote notebookId (ClientOnlyNote noteId content) =
     Encode.object
-        [ ( "id", Encode.string noteId )
-        , ( "content", Encode.string content )
+        [ ( "content", Encode.string content )
         , ( "notebook_id", Encode.string (notebookIdToString notebookId) )
         ]
 
