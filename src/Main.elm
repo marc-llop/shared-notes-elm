@@ -105,7 +105,7 @@ type Msg
     | WriteNote String String
     | AddNote
     | NoteCreated ClientOnlyNote Random.Seed
-    | NoteStored StoredNote
+    | NoteStored (Result Http.Error StoredNote)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -146,29 +146,29 @@ update msg model =
             ( model, Note.newNote NoteCreated model.randomSeed )
 
         NoteCreated note newSeed ->
-            ( { model
-                | randomSeed = newSeed
-                , app =
-                    case model.app of
-                        OpeningNewNotebook ->
-                            OpeningNewNotebook
+            case model.app of
+                OpeningNewNotebook ->
+                    ( model, Cmd.none )
 
-                        NotebookOpen nId notes ->
-                            let
-                                newNote : Note
-                                newNote =
-                                    ClientOnly note
+                NotebookOpen nId notes ->
+                    let
+                        newNote : Note
+                        newNote =
+                            ClientOnly note
 
-                                noteId : String
-                                noteId =
-                                    Note.noteIdString newNote
-                            in
+                        noteId : String
+                        noteId =
+                            Note.noteIdString newNote
+
+                        newApp : App
+                        newApp =
                             NotebookOpen nId (Dict.insert noteId newNote notes)
-              }
-            , Debug.todo "Store note and send NoteStored"
-            )
+                    in
+                    ( { randomSeed = newSeed, app = newApp }
+                    , Task.attempt NoteStored (Note.insertNote nId note)
+                    )
 
-        NoteStored note ->
+        NoteStored result ->
             Debug.todo "Update note in dict with new ID"
 
 
