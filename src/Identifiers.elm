@@ -1,4 +1,4 @@
-module Identifiers exposing (NotebookId, generateNextShortId, generateNotebookId, notebookIdToString, parseNotebookId, wordGenerator)
+module Identifiers exposing (NotebookId, generateNextShortId, generateNotebookId, generateShortId, notebookIdToString, parseNotebookId, wordGenerator)
 
 import Http
 import Http.Tasks
@@ -115,27 +115,37 @@ It attempts to get the first two words from an API that provides real
 english words, so that the notebook ID is more readable, but if the
 API fails it reverts to random characters.
 
-    Task.perform (\s -> NotebookIdGenerated s) generateNotebookId
+    type Msg
+        = GenerateNotebookId
+        | NotebookIdGenerated NotebookId Random.Seed
+
+    update : Msg -> Model -> ( Model, Cmd Msg )
+    update msg model =
+        case msg of
+            GenerateNotebookId ->
+                ( model
+                , generateNotebookId NotebookIdGenerated model.seed
+                )
+
+            NotebookIdGenerated notebookId seed ->
+                ( { model | notebookId = notebookId, seed = seed }
+                , Cmd.none
+                )
 
 -}
-generateNotebookId : Int -> Task x NotebookId
-generateNotebookId randomSeed =
+generateNotebookId : (NotebookId -> Seed -> msg) -> Seed -> Cmd msg
+generateNotebookId msg randomSeed =
     let
-        initialSeed : Seed
-        initialSeed =
-            Random.initialSeed randomSeed
-
-        generateThreeShortIds : a -> Task x NotebookId
+        generateThreeShortIds : a -> Task x ( NotebookId, Seed )
         generateThreeShortIds _ =
-            generateNextShortId ( notebookIdFromWords, initialSeed )
+            generateNextShortId ( notebookIdFromWords, randomSeed )
                 |> Task.andThen generateNextShortId
                 |> Task.andThen generateNextShortId
-                |> Task.map Tuple.first
 
-        appendGeneratedId : ( String, String ) -> Task Error NotebookId
+        appendGeneratedId : ( String, String ) -> Task Error ( NotebookId, Seed )
         appendGeneratedId ( a, b ) =
-            generateShortId initialSeed
-                |> Task.map (\( c, _ ) -> notebookIdFromWords a b c)
+            generateShortIdTask randomSeed
+                |> Task.map (Tuple.mapFirst (\c -> notebookIdFromWords a b c))
                 |> Task.mapError (\_ -> None)
     in
     -- Attempt to get two real words from an API, because it gives readable and nice IDs, and one random word.
@@ -144,10 +154,11 @@ generateNotebookId randomSeed =
         |> Task.andThen appendGeneratedId
         -- If it fails, generate three random alphanumeric IDs and call it a day.
         |> Task.onError generateThreeShortIds
+        |> Task.perform (\( notebookId, seed ) -> msg notebookId seed)
 
 
-generateShortId : Seed -> Task x ( String, Seed )
-generateShortId randomSeed =
+generateShortIdTask : Seed -> Task x ( String, Seed )
+generateShortIdTask randomSeed =
     Time.now
         |> Task.map
             (\_ ->
@@ -156,8 +167,44 @@ generateShortId randomSeed =
             )
 
 
+{-| Given a random seed, returns a Cmd that will result in
+the new entity and the next seed.
+
+This function is better used directly from the update function.
+If you want to chain ID generation with other tasks, check
+generateNextShortId instead.
+
+    type Msg
+        = GenerateId
+        | ShortIdGenerated String Random.Seed
+
+    update : Msg -> Model -> ( Model, Cmd Msg )
+    update msg model =
+        case msg of
+            GenerateId ->
+                ( model
+                , generateShortId ShortIdGenerated model.seed
+                )
+
+            ShortIdGenerated shortId seed ->
+                ( { model | shortId = shortId, seed = seed }
+                , Cmd.none
+                )
+
+-}
+generateShortId : (String -> Seed -> msg) -> Seed -> Cmd msg
+generateShortId msg randomSeed =
+    Task.perform
+        (\( shortId, seed ) -> msg shortId seed)
+        (generateShortIdTask randomSeed)
+
+
 {-| Given a random seed and a string constructor, returns a Task that will
 result in the new entity and the next seed.
+
+This function is better for generating IDs inside Task chains.
+If you want to generate an ID from the update function,
+check generateShortId instead.
 
     type MyId = MyId String
 
@@ -167,7 +214,7 @@ result in the new entity and the next seed.
 -}
 generateNextShortId : ( String -> a, Seed ) -> Task x ( a, Seed )
 generateNextShortId ( shortIds, randomSeed ) =
-    generateShortId randomSeed
+    generateShortIdTask randomSeed
         |> Task.map (\( generatedId, nextSeed ) -> ( shortIds generatedId, nextSeed ))
 
 

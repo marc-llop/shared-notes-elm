@@ -8,7 +8,6 @@ Features:
 - [x] Automatic notebook creation on enter.
 - [x] Human-friendly unique notebook IDs.
 - [x] Add, update and delete notes.
-- [x] Sleek design (it looks cooler than I expected).
 - [ ] Notes are stored in the cloud.
 - [ ] Notes are also stored in the browser.
 - [ ] Notes are duplicated on conflict.

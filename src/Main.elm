@@ -13,8 +13,10 @@ import Html.Styled.Attributes as Attributes exposing (class)
 import Html.Styled.Keyed as Keyed
 import Http
 import Icons
-import Identifiers exposing (NotebookId, notebookIdToString, parseNotebookId)
+import Identifiers exposing (NotebookId, generateShortId, notebookIdToString, parseNotebookId)
+import Note exposing (ClientOnlyNote, Note(..), StoredNote, noteIdString, noteToPair, noteView)
 import Notebook exposing (insertNotebook)
+import Random
 import Spinner exposing (spinner)
 import Task
 
@@ -22,28 +24,25 @@ import Task
 port updateLocation : String -> Cmd msg
 
 
-type alias Note =
-    ( String, String )
-
-
 type alias Notes =
-    Dict String String
+    Dict String Note
 
 
-type Model
+type App
     = OpeningNewNotebook
     | NotebookOpen NotebookId Notes
 
 
+type alias Model =
+    { randomSeed : Random.Seed
+    , app : App
+    }
+
+
 exampleNotes : Notes
 exampleNotes =
-    [ ( "1", "Store model in localStorage as well so it can be started offline." )
-    , ( "2", "Merge a notebook's notes in a non-destructive way whenever a content conflict is detected after downloading a note." )
-    , ( "3", "Make notes automatically synchronized by using supabase client's real-time API on a JS port." )
-    , ( "4", "Make note deletion undoable." )
-    , ( "5", "Debounce database updates." )
-    , ( "6", "Regenerate notebook ID upon primary key constraint violation on insert." )
-    ]
+    Note.exampleNotes
+        |> List.map noteToPair
         |> Dict.fromList
 
 
@@ -54,30 +53,40 @@ type alias Flags =
 init : Flags -> ( Model, Cmd Msg )
 init { path, randomSeed } =
     let
-        newNotebook : ( Model, Cmd Msg )
+        firstSeed : Random.Seed
+        firstSeed =
+            Random.initialSeed randomSeed
+
+        newNotebook : ( App, Cmd Msg )
         newNotebook =
             ( OpeningNewNotebook
-            , Task.perform IdGenerated (Identifiers.generateNotebookId randomSeed)
+            , Identifiers.generateNotebookId IdGenerated firstSeed
             )
 
-        existingNotebook : NotebookId -> ( Model, Cmd Msg )
+        existingNotebook : NotebookId -> ( App, Cmd Msg )
         existingNotebook notebookId =
             ( NotebookOpen notebookId exampleNotes
             , Cmd.none
             )
+
+        newApp : ( App, Cmd Msg )
+        newApp =
+            case String.toList path of
+                [ '/' ] ->
+                    newNotebook
+
+                '/' :: notebookId ->
+                    String.fromList notebookId
+                        |> parseNotebookId
+                        |> Result.map existingNotebook
+                        |> Result.withDefault newNotebook
+
+                _ ->
+                    newNotebook
     in
-    case String.toList path of
-        [ '/' ] ->
-            newNotebook
-
-        '/' :: notebookId ->
-            String.fromList notebookId
-                |> parseNotebookId
-                |> Result.map existingNotebook
-                |> Result.withDefault newNotebook
-
-        _ ->
-            newNotebook
+    Tuple.mapFirst
+        (\app -> { randomSeed = firstSeed, app = app })
+        newApp
 
 
 main : Program Flags Model Msg
@@ -91,17 +100,21 @@ main =
 
 
 type Msg
-    = IdGenerated NotebookId
+    = IdGenerated NotebookId Random.Seed
     | NotebookStored (Result Http.Error NotebookId)
     | WriteNote String String
     | AddNote
+    | NoteCreated ClientOnlyNote Random.Seed
+    | NoteStored StoredNote
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        IdGenerated notebookId ->
-            ( NotebookOpen notebookId exampleNotes
+        IdGenerated notebookId seed ->
+            ( { app = NotebookOpen notebookId exampleNotes
+              , randomSeed = seed
+              }
             , Cmd.batch
                 [ updateLocation (notebookIdToString notebookId)
                 , Task.attempt NotebookStored (insertNotebook notebookId)
@@ -112,29 +125,51 @@ update msg model =
             ( model, Cmd.none )
 
         WriteNote noteId value ->
-            ( case model of
-                OpeningNewNotebook ->
-                    model
+            ( { model
+                | app =
+                    case model.app of
+                        OpeningNewNotebook ->
+                            model.app
 
-                NotebookOpen notebookId notes ->
-                    NotebookOpen notebookId
-                        (Dict.update noteId (\_ -> Just value) notes)
+                        NotebookOpen notebookId notes ->
+                            let
+                                updateMaybeNote =
+                                    Maybe.map (Note.updateNoteText value)
+                            in
+                            NotebookOpen notebookId
+                                (Dict.update noteId updateMaybeNote notes)
+              }
             , Cmd.none
             )
 
         AddNote ->
-            ( model, Cmd.none )
+            ( model, Note.newNote NoteCreated model.randomSeed )
 
+        NoteCreated note newSeed ->
+            ( { model
+                | randomSeed = newSeed
+                , app =
+                    case model.app of
+                        OpeningNewNotebook ->
+                            OpeningNewNotebook
 
-noteView : { note : Note, onInput : String -> String -> msg } -> ( String, Html msg )
-noteView { note, onInput } =
-    ( Tuple.first note
-    , autoTextarea
-        { value = Tuple.second note
-        , onInput = onInput (Tuple.first note)
-        , placeholder = ""
-        }
-    )
+                        NotebookOpen nId notes ->
+                            let
+                                newNote : Note
+                                newNote =
+                                    ClientOnly note
+
+                                noteId : String
+                                noteId =
+                                    Note.noteIdString newNote
+                            in
+                            NotebookOpen nId (Dict.insert noteId newNote notes)
+              }
+            , Debug.todo "Store note and send NoteStored"
+            )
+
+        NoteStored note ->
+            Debug.todo "Update note in dict with new ID"
 
 
 buttonRow : Html msg
@@ -160,7 +195,7 @@ openNotebook notebookId notes =
         notesList =
             Dict.toList notes
                 |> List.sortBy (Tuple.first >> String.toInt >> Maybe.withDefault 0)
-                |> List.map (\note -> noteView { note = note, onInput = WriteNote })
+                |> List.map (\( _, note ) -> noteView { note = note, onInput = WriteNote })
     in
     div [ class "notebook" ]
         [ span [] [ text <| notebookIdToString notebookId ]
@@ -177,7 +212,7 @@ view model =
     let
         notebook : Html Msg
         notebook =
-            case model of
+            case model.app of
                 OpeningNewNotebook ->
                     spinner
 
