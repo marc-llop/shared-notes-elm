@@ -13,7 +13,7 @@ import Html.Styled.Attributes as Attributes exposing (class)
 import Html.Styled.Keyed as Keyed
 import Http
 import Icons
-import Identifiers exposing (NotebookId, generateShortId, notebookIdToString, parseNotebookId)
+import Identifiers exposing (NotebookId)
 import Note exposing (ClientOnlyNote, Note(..), StoredNote, noteIdString, noteToPair, noteView)
 import Notebook exposing (insertNotebook)
 import Random
@@ -53,14 +53,10 @@ type alias Flags =
 init : Flags -> ( Model, Cmd Msg )
 init { path, randomSeed } =
     let
-        firstSeed : Random.Seed
-        firstSeed =
-            Random.initialSeed randomSeed
-
         newNotebook : ( App, Cmd Msg )
         newNotebook =
             ( OpeningNewNotebook
-            , Identifiers.generateNotebookId IdGenerated firstSeed
+            , Identifiers.fetchTwoWords WordsFetched
             )
 
         existingNotebook : NotebookId -> ( App, Cmd Msg )
@@ -77,7 +73,7 @@ init { path, randomSeed } =
 
                 '/' :: notebookId ->
                     String.fromList notebookId
-                        |> parseNotebookId
+                        |> Identifiers.parseNotebookId
                         |> Result.map existingNotebook
                         |> Result.withDefault newNotebook
 
@@ -85,7 +81,11 @@ init { path, randomSeed } =
                     newNotebook
     in
     Tuple.mapFirst
-        (\app -> { randomSeed = firstSeed, app = app })
+        (\app ->
+            { randomSeed = Random.initialSeed randomSeed
+            , app = app
+            }
+        )
         newApp
 
 
@@ -100,26 +100,55 @@ main =
 
 
 type Msg
-    = IdGenerated NotebookId Random.Seed
+    = WordsFetched (Result Http.Error ( String, String ))
     | NotebookStored (Result Http.Error NotebookId)
     | WriteNote String String
     | AddNote
-    | NoteCreated ClientOnlyNote Random.Seed
     | NoteStored ClientOnlyNote (Result Http.Error StoredNote)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        IdGenerated notebookId seed ->
-            ( { app = NotebookOpen notebookId exampleNotes
-              , randomSeed = seed
-              }
-            , Cmd.batch
-                [ updateLocation (notebookIdToString notebookId)
-                , Task.attempt NotebookStored (insertNotebook notebookId)
-                ]
-            )
+        WordsFetched result ->
+            let
+                newModel : Random.Seed -> NotebookId -> ( Model, Cmd Msg )
+                newModel newSeed notebookId =
+                    ( { randomSeed = newSeed
+                      , app = NotebookOpen notebookId exampleNotes
+                      }
+                    , Cmd.batch
+                        [ updateLocation (Identifiers.notebookIdToString notebookId)
+                        , Task.attempt NotebookStored (insertNotebook notebookId)
+                        ]
+                    )
+            in
+            case result of
+                Ok ( a, b ) ->
+                    let
+                        ( c, newSeed ) =
+                            Random.step Identifiers.wordGenerator model.randomSeed
+
+                        notebookId =
+                            Identifiers.notebookIdFromWords a b c
+                    in
+                    newModel newSeed notebookId
+
+                Err _ ->
+                    let
+                        ( a, seed1 ) =
+                            Random.step Identifiers.wordGenerator model.randomSeed
+
+                        ( b, seed2 ) =
+                            Random.step Identifiers.wordGenerator seed1
+
+                        ( c, seed3 ) =
+                            Random.step Identifiers.wordGenerator seed2
+
+                        notebookId =
+                            Identifiers.notebookIdFromWords a b c
+                    in
+                    newModel seed3 notebookId
 
         NotebookStored _ ->
             ( model, Cmd.none )
@@ -143,9 +172,10 @@ update msg model =
             )
 
         AddNote ->
-            ( model, Note.newNote NoteCreated model.randomSeed )
-
-        NoteCreated note newSeed ->
+            let
+                ( note, newSeed ) =
+                    Note.newNote model.randomSeed
+            in
             case model.app of
                 OpeningNewNotebook ->
                     ( model, Cmd.none )
@@ -225,7 +255,7 @@ openNotebook notebookId notes =
                 |> List.map (\( _, note ) -> noteView { note = note, onInput = WriteNote })
     in
     div [ class "notebook" ]
-        [ span [] [ text <| notebookIdToString notebookId ]
+        [ span [] [ text <| Identifiers.notebookIdToString notebookId ]
         , p [] [ b [] [ text "Warning: " ], text "All notebooks are PUBLIC." ]
         , p [] [ text "Be mindful of what you write here. Never write any personal information, passwords, or any information you want to protect." ]
         , buttonRow

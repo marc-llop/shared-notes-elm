@@ -3,7 +3,7 @@ module Note exposing (ClientOnlyNote, Note(..), StoredNote, exampleNotes, insert
 import AutoTextarea
 import Html.Styled exposing (Html)
 import Http
-import Identifiers exposing (NotebookId, generateShortId, notebookIdToString)
+import Identifiers exposing (NotebookId, notebookIdToString, wordGenerator)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
 import Random exposing (Seed)
@@ -34,13 +34,15 @@ noteIdString note =
             String.fromInt id
 
 
-newNote : (ClientOnlyNote -> Seed -> msg) -> Seed -> Cmd msg
-newNote toMsg seed =
+newNote : Seed -> ( ClientOnlyNote, Seed )
+newNote seed =
     let
-        newNoteFromId id =
-            ClientOnlyNote id ""
+        newNoteWithId : String -> ClientOnlyNote
+        newNoteWithId noteId =
+            ClientOnlyNote noteId ""
     in
-    generateShortId (newNoteFromId >> toMsg) seed
+    Random.step wordGenerator seed
+        |> Tuple.mapFirst newNoteWithId
 
 
 updateNoteText : String -> Note -> Note

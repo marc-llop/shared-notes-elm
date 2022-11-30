@@ -1,14 +1,12 @@
-module Identifiers exposing (NotebookId, generateNotebookId, generateShortId, notebookIdToString, parseNotebookId, wordGenerator)
+module Identifiers exposing (NotebookId, fetchTwoWords, notebookIdFromWords, notebookIdToString, parseNotebookId, wordGenerator)
 
 import Http
-import Http.Tasks
 import Json.Decode as Decode exposing (Decoder)
 import Random exposing (Generator, Seed)
 import Random.Char
 import Random.Extra
 import Random.String
 import Regex
-import Task exposing (Task)
 
 
 {-| Identifies a Notebook. It renders as three dash-separated five-letter strings,
@@ -93,123 +91,14 @@ wordsDecoder =
             )
 
 
-requestTwoWords : Task Http.Error ( String, String )
-requestTwoWords =
-    Http.Tasks.get
+{-| Requests two 5-character words chosen randomly from a dictionary to a remote API.
+-}
+fetchTwoWords : (Result Http.Error ( String, String ) -> msg) -> Cmd msg
+fetchTwoWords toMsg =
+    Http.get
         { url = "https://random-word-api.herokuapp.com/word?number=2&length=" ++ String.fromInt idWordLength
-        , resolver = Http.Tasks.resolveJson wordsDecoder
+        , expect = Http.expectJson toMsg wordsDecoder
         }
-
-
-{-| Auxiliary Error type that allows mixing (Task x a) with (Task Http.Error a)
--}
-type Error
-    = Http
-    | None
-
-
-{-| Generates a notebook ID of the form xxxxx-xxxxx-xxxxx (three words
-of five lowercase alphanumeric characters separated by hyphens).
-It attempts to get the first two words from an API that provides real
-english words, so that the notebook ID is more readable, but if the
-API fails it reverts to random characters.
-
-    type Msg
-        = GenerateNotebookId
-        | NotebookIdGenerated NotebookId Random.Seed
-
-    update : Msg -> Model -> ( Model, Cmd Msg )
-    update msg model =
-        case msg of
-            GenerateNotebookId ->
-                ( model
-                , generateNotebookId NotebookIdGenerated model.seed
-                )
-
-            NotebookIdGenerated notebookId seed ->
-                ( { model | notebookId = notebookId, seed = seed }
-                , Cmd.none
-                )
-
--}
-generateNotebookId : (NotebookId -> Seed -> msg) -> Seed -> Cmd msg
-generateNotebookId msg randomSeed =
-    let
-        generateThreeShortIds : a -> Task x ( NotebookId, Seed )
-        generateThreeShortIds _ =
-            generateNextShortId ( notebookIdFromWords, randomSeed )
-                |> Task.andThen generateNextShortId
-                |> Task.andThen generateNextShortId
-
-        appendGeneratedId : ( String, String ) -> Task Error ( NotebookId, Seed )
-        appendGeneratedId ( a, b ) =
-            generateShortIdTask randomSeed
-                |> Task.map (Tuple.mapFirst (\c -> notebookIdFromWords a b c))
-                |> Task.mapError (\_ -> None)
-    in
-    -- Attempt to get two real words from an API, because it gives readable and nice IDs, and one random word.
-    requestTwoWords
-        |> Task.mapError (\_ -> Http)
-        |> Task.andThen appendGeneratedId
-        -- If it fails, generate three random alphanumeric IDs and call it a day.
-        |> Task.onError generateThreeShortIds
-        |> Task.perform (\( notebookId, seed ) -> msg notebookId seed)
-
-
-generateShortIdTask : Seed -> Task x ( String, Seed )
-generateShortIdTask randomSeed =
-    Task.succeed (Random.step wordGenerator randomSeed)
-
-
-{-| Given a random seed, returns a Cmd that will result in
-the new entity and the next seed.
-
-This function is better used directly from the update function.
-If you want to chain ID generation with other tasks, check
-generateNextShortId instead.
-
-    type Msg
-        = GenerateId
-        | ShortIdGenerated String Random.Seed
-
-    update : Msg -> Model -> ( Model, Cmd Msg )
-    update msg model =
-        case msg of
-            GenerateId ->
-                ( model
-                , generateShortId ShortIdGenerated model.seed
-                )
-
-            ShortIdGenerated shortId seed ->
-                ( { model | shortId = shortId, seed = seed }
-                , Cmd.none
-                )
-
--}
-generateShortId : (String -> Seed -> msg) -> Seed -> Cmd msg
-generateShortId msg randomSeed =
-    Task.perform
-        (\( shortId, seed ) -> msg shortId seed)
-        (generateShortIdTask randomSeed)
-
-
-{-| Given a random seed and a string constructor, returns a Task that will
-result in the new entity and the next seed.
-
-This function is better for generating IDs inside Task chains.
-If you want to generate an ID from the update function,
-check generateShortId instead.
-
-    type MyId = MyId String
-
-    generateNextShortId (MyId, model.seed)
-        |> Task.andThen (\(myId, newSeed) -> ...)
-
--}
-generateNextShortId : ( String -> a, Seed ) -> Task x ( a, Seed )
-generateNextShortId ( shortIds, randomSeed ) =
-    generateShortIdTask randomSeed
-        |> Task.map (\( generatedId, nextSeed ) -> ( shortIds generatedId, nextSeed ))
 
 
 {-| Random generator that generates alphanumeric words of length 5.
