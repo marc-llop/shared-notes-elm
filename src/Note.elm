@@ -39,7 +39,7 @@ newNote seed =
     let
         newNoteWithId : String -> ClientOnlyNote
         newNoteWithId noteId =
-            ClientOnlyNote noteId ""
+            ClientOnlyNote ("clientId-" ++ noteId) ""
     in
     Random.step wordGenerator seed
         |> Tuple.mapFirst newNoteWithId
@@ -131,11 +131,11 @@ noteView { note, onInput } =
 
 exampleNotes : List Note
 exampleNotes =
-    [ ClientOnlyNote "1" "Store model in localStorage as well so it can be started offline."
-    , ClientOnlyNote "2" "Merge a notebook's notes in a non-destructive way whenever a content conflict is detected after downloading a note."
-    , ClientOnlyNote "3" "Make notes automatically synchronized by using supabase client's real-time API on a JS port."
-    , ClientOnlyNote "4" "Make note deletion undoable."
-    , ClientOnlyNote "5" "Debounce database updates."
-    , ClientOnlyNote "6" "Regenerate notebook ID upon primary key constraint violation on insert."
+    [ ClientOnlyNote "clientId-1" "Store model in localStorage as well so it can be started offline."
+    , ClientOnlyNote "clientId-2" "Merge a notebook's notes in a non-destructive way whenever a content conflict is detected after downloading a note."
+    , ClientOnlyNote "clientId-3" "Make notes automatically synchronized by using supabase client's real-time API on a JS port."
+    , ClientOnlyNote "clientId-4" "Make note deletion undoable."
+    , ClientOnlyNote "clientId-5" "Debounce database updates."
+    , ClientOnlyNote "clientId-6" "Regenerate notebook ID upon primary key constraint violation on insert."
     ]
         |> List.map ClientOnly
