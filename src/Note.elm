@@ -1,4 +1,4 @@
-module Note exposing (ClientOnlyNote, Note(..), StoredNote, exampleNotes, insertNote, newNote, noteIdString, noteToPair, noteView, updateNoteText)
+module Note exposing (ClientOnlyNote, Note(..), StoredNote, exampleNotes, insertNote, newNote, noteIdString, noteToPair, noteView, updateNote, updateNoteText)
 
 import AutoTextarea
 import Html.Styled exposing (Html)
@@ -7,7 +7,7 @@ import Identifiers exposing (NotebookId, notebookIdToString, wordGenerator)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
 import Random exposing (Seed)
-import Supabase exposing (postSupabase, singletonDecoder)
+import Supabase exposing (postSupabase, singletonDecoder, upsertSupabase)
 import Task exposing (Task)
 
 
@@ -63,12 +63,28 @@ encodeClientNote notebookId (ClientOnlyNote _ content) =
         ]
 
 
-encodeStoredNote : StoredNote -> Value
-encodeStoredNote (StoredNote noteId content) =
+encodeStoredNote : NotebookId -> StoredNote -> Value
+encodeStoredNote notebookId (StoredNote noteId content) =
     Encode.object
         [ ( "id", Encode.int noteId )
         , ( "content", Encode.string content )
+        , ( "notebook_id", Encode.string (notebookIdToString notebookId) )
         ]
+
+
+encodeNote : NotebookId -> Note -> Value
+encodeNote notebookId note =
+    case note of
+        ClientOnly n ->
+            encodeClientNote notebookId n
+
+        Stored n ->
+            encodeStoredNote notebookId n
+
+
+encodeNoteList : NotebookId -> List Note -> Value
+encodeNoteList notebookId notes =
+    Encode.list (encodeNote notebookId) notes
 
 
 noteDecoder : Decoder StoredNote
@@ -94,6 +110,20 @@ insertNote toMsg notebookId note =
     postSupabase
         { path = endpoint
         , body = encodeClientNote notebookId note
+        , decoder = firstNoteDecoder
+        , toMsg = toMsg
+        }
+
+
+updateNote : (Result Http.Error StoredNote -> msg) -> NotebookId -> Note -> Cmd msg
+updateNote toMsg notebookId note =
+    let
+        noteId =
+            noteIdString note
+    in
+    upsertSupabase
+        { path = endpoint ++ "?id=eq." ++ noteId ++ "&notebook_id=eq." ++ notebookIdToString notebookId
+        , body = encodeNoteList notebookId [ note ]
         , decoder = firstNoteDecoder
         , toMsg = toMsg
         }

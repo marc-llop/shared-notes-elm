@@ -1,4 +1,4 @@
-module Supabase exposing (getSupabase, patchSupabase, postSupabase, singletonDecoder)
+module Supabase exposing (getSupabase, patchSupabase, postSupabase, singletonDecoder, upsertSupabase)
 
 import Http exposing (emptyBody, expectJson, header, jsonBody, request)
 import Json.Decode as Decode exposing (Decoder)
@@ -107,7 +107,11 @@ upsertSupabase :
 upsertSupabase { path, body, decoder, toMsg } =
     request
         { method = "POST"
-        , headers = headers ++ [ header "Prefer" "resolution=merge-duplicates" ]
+        , headers =
+            headers
+                ++ [ header "Prefer" "resolution=merge-duplicates"
+                   , header "Prefer" "return=representation"
+                   ]
         , url = endpoint path
         , body = jsonBody body
         , expect = expectJson toMsg decoder

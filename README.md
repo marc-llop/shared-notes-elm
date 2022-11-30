@@ -8,7 +8,7 @@ Features:
 - [x] Automatic notebook creation on enter.
 - [x] Human-friendly unique notebook IDs.
 - [x] Add, update and delete notes.
-- [ ] Notes are stored in the cloud.
+- [x] Notes are stored in the cloud.
 - [ ] Notes are also stored in the browser.
 - [ ] Notes are duplicated on conflict.
 - [ ] Real-time multi-user edition of notes.

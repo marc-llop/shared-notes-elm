@@ -105,6 +105,7 @@ type Msg
     | WriteNote String String
     | AddNote
     | NoteStored ClientOnlyNote (Result Http.Error StoredNote)
+    | NoteUpdated Note (Result Http.Error StoredNote)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -122,22 +123,42 @@ update msg model =
             ( model, Cmd.none )
 
         WriteNote noteId value ->
-            ( { model
-                | app =
-                    case model.app of
-                        OpeningNewNotebook ->
-                            model.app
+            case model.app of
+                OpeningNewNotebook ->
+                    ( model, Cmd.none )
 
-                        NotebookOpen notebookId notes ->
-                            let
-                                updateMaybeNote =
-                                    Maybe.map (Note.updateNoteText value)
-                            in
+                NotebookOpen notebookId notes ->
+                    let
+                        maybeNewNote : Maybe Note
+                        maybeNewNote =
+                            Dict.get noteId notes
+                                |> Maybe.map (Note.updateNoteText value)
+
+                        updateInDict : Maybe Note -> Maybe Note
+                        updateInDict =
+                            Maybe.andThen (\_ -> maybeNewNote)
+                    in
+                    ( { model
+                        | app =
                             NotebookOpen notebookId
-                                (Dict.update noteId updateMaybeNote notes)
-              }
-            , Cmd.none
-            )
+                                (Dict.update noteId updateInDict notes)
+                      }
+                    , case maybeNewNote of
+                        Nothing ->
+                            Cmd.none
+
+                        Just note ->
+                            Note.updateNote (NoteUpdated note) notebookId note
+                    )
+
+        NoteUpdated oldNote result ->
+            case oldNote of
+                Stored _ ->
+                    ( model, Cmd.none )
+
+                ClientOnly note ->
+                    -- TODO: Avoid double adding a note when a NoteUpdated message arrives before the last one has had time to update the model.
+                    updateStoredNoteIdInModel note result model
 
         AddNote ->
             let
@@ -167,19 +188,24 @@ update msg model =
                     )
 
         NoteStored oldNote result ->
-            case ( result, model.app ) of
-                ( _, OpeningNewNotebook ) ->
-                    ( model, Cmd.none )
+            updateStoredNoteIdInModel oldNote result model
 
-                ( Ok storedNote, NotebookOpen nId notes ) ->
-                    ( { model
-                        | app = NotebookOpen nId (changeNoteId oldNote storedNote notes)
-                      }
-                    , Cmd.none
-                    )
 
-                ( Err _, NotebookOpen _ _ ) ->
-                    ( model, Cmd.none )
+updateStoredNoteIdInModel : ClientOnlyNote -> Result Http.Error StoredNote -> Model -> ( Model, Cmd Msg )
+updateStoredNoteIdInModel oldNote result model =
+    case ( result, model.app ) of
+        ( _, OpeningNewNotebook ) ->
+            ( model, Cmd.none )
+
+        ( Ok storedNote, NotebookOpen nId notes ) ->
+            ( { model
+                | app = NotebookOpen nId (changeNoteId oldNote storedNote notes)
+              }
+            , Cmd.none
+            )
+
+        ( Err _, NotebookOpen _ _ ) ->
+            ( model, Cmd.none )
 
 
 openNotebookInModel : Random.Seed -> NotebookId -> ( Model, Cmd Msg )
