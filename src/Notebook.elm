@@ -56,10 +56,11 @@ firstNotebookIdDecoder =
 {-| Inserts a new notebook with this ID in a remote database.
 Fails if a notebook with this ID already exists.
 -}
-insertNotebook : NotebookId -> Task Http.Error NotebookId
-insertNotebook notebookId =
+insertNotebook : (Result Http.Error NotebookId -> msg) -> NotebookId -> Cmd msg
+insertNotebook toMsg notebookId =
     postSupabase
         { path = endpoint
         , body = encodeNotebookId notebookId
         , decoder = notebookIdDecoder
+        , toMsg = toMsg
         }

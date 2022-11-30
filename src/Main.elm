@@ -119,7 +119,7 @@ update msg model =
                       }
                     , Cmd.batch
                         [ updateLocation (Identifiers.notebookIdToString notebookId)
-                        , Task.attempt NotebookStored (insertNotebook notebookId)
+                        , insertNotebook NotebookStored notebookId
                         ]
                     )
             in
@@ -195,7 +195,7 @@ update msg model =
                             NotebookOpen nId (Dict.insert noteId newNote notes)
                     in
                     ( { randomSeed = newSeed, app = newApp }
-                    , Task.attempt (NoteStored note) (Note.insertNote nId note)
+                    , Note.insertNote (NoteStored note) nId note
                     )
 
         NoteStored oldNote result ->

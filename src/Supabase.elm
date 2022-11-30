@@ -1,10 +1,8 @@
 module Supabase exposing (getSupabase, patchSupabase, postSupabase, singletonDecoder)
 
-import Http exposing (emptyBody, header, jsonBody, task)
-import Http.Tasks exposing (resolveJson)
+import Http exposing (emptyBody, expectJson, header, jsonBody, request)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode exposing (Value)
-import Task exposing (Task)
 
 
 clientKey : String
@@ -38,18 +36,25 @@ PostgREST filters you want applied.
     getSupabase
         { path = "notes?id=eq.1&select=some_column,other_table(foreign_key)"
         , decoder = noteListDecoder
+        , toMsg = NotesFetched
         }
 
 -}
-getSupabase : { path : String, decoder : Decoder a } -> Task Http.Error a
-getSupabase { path, decoder } =
-    task
+getSupabase :
+    { path : String
+    , decoder : Decoder a
+    , toMsg : Result Http.Error a -> msg
+    }
+    -> Cmd msg
+getSupabase { path, decoder, toMsg } =
+    request
         { method = "GET"
         , headers = headers
         , url = endpoint path
         , body = emptyBody
-        , resolver = resolveJson decoder
+        , expect = expectJson toMsg decoder
         , timeout = Nothing
+        , tracker = Nothing
         }
 
 
@@ -62,15 +67,22 @@ getSupabase { path, decoder } =
         }
 
 -}
-postSupabase : { path : String, body : Value, decoder : Decoder a } -> Task Http.Error a
-postSupabase { path, body, decoder } =
-    task
+postSupabase :
+    { path : String
+    , body : Value
+    , decoder : Decoder a
+    , toMsg : Result Http.Error a -> msg
+    }
+    -> Cmd msg
+postSupabase { path, body, decoder, toMsg } =
+    request
         { method = "POST"
         , headers = headers ++ [ header "Prefer" "return=representation" ]
         , url = endpoint path
         , body = jsonBody body
-        , resolver = resolveJson decoder
+        , expect = expectJson toMsg decoder
         , timeout = Nothing
+        , tracker = Nothing
         }
 
 
@@ -85,15 +97,22 @@ already existing rows).
         }
 
 -}
-upsertSupabase : { path : String, body : Value, decoder : Decoder a } -> Task Http.Error a
-upsertSupabase { path, body, decoder } =
-    task
+upsertSupabase :
+    { path : String
+    , body : Value
+    , decoder : Decoder a
+    , toMsg : Result Http.Error a -> msg
+    }
+    -> Cmd msg
+upsertSupabase { path, body, decoder, toMsg } =
+    request
         { method = "POST"
         , headers = headers ++ [ header "Prefer" "resolution=merge-duplicates" ]
         , url = endpoint path
         , body = jsonBody body
-        , resolver = resolveJson decoder
+        , expect = expectJson toMsg decoder
         , timeout = Nothing
+        , tracker = Nothing
         }
 
 
@@ -106,15 +125,22 @@ upsertSupabase { path, body, decoder } =
         }
 
 -}
-patchSupabase : { path : String, body : Value, decoder : Decoder a } -> Task Http.Error a
-patchSupabase { path, body, decoder } =
-    task
+patchSupabase :
+    { path : String
+    , body : Value
+    , decoder : Decoder a
+    , toMsg : Result Http.Error a -> msg
+    }
+    -> Cmd msg
+patchSupabase { path, body, decoder, toMsg } =
+    request
         { method = "PATCH"
         , headers = headers ++ [ header "Prefer" "return=representation" ]
         , url = endpoint path
         , body = jsonBody body
-        , resolver = resolveJson decoder
+        , expect = expectJson toMsg decoder
         , timeout = Nothing
+        , tracker = Nothing
         }
 
 

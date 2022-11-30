@@ -89,12 +89,13 @@ endpoint =
     "notes"
 
 
-insertNote : NotebookId -> ClientOnlyNote -> Task Http.Error StoredNote
-insertNote notebookId note =
+insertNote : (Result Http.Error StoredNote -> msg) -> NotebookId -> ClientOnlyNote -> Cmd msg
+insertNote toMsg notebookId note =
     postSupabase
         { path = endpoint
         , body = encodeClientNote notebookId note
         , decoder = noteDecoder
+        , toMsg = toMsg
         }
 
 
