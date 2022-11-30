@@ -111,44 +111,12 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         WordsFetched result ->
-            let
-                newModel : Random.Seed -> NotebookId -> ( Model, Cmd Msg )
-                newModel newSeed notebookId =
-                    ( { randomSeed = newSeed
-                      , app = NotebookOpen notebookId exampleNotes
-                      }
-                    , Cmd.batch
-                        [ updateLocation (Identifiers.notebookIdToString notebookId)
-                        , insertNotebook NotebookStored notebookId
-                        ]
-                    )
-            in
             case result of
                 Ok ( a, b ) ->
-                    let
-                        ( c, newSeed ) =
-                            Random.step Identifiers.wordGenerator model.randomSeed
-
-                        notebookId =
-                            Identifiers.notebookIdFromWords a b c
-                    in
-                    newModel newSeed notebookId
+                    generateNotebookIdFromWords ( a, b ) model.randomSeed
 
                 Err _ ->
-                    let
-                        ( a, seed1 ) =
-                            Random.step Identifiers.wordGenerator model.randomSeed
-
-                        ( b, seed2 ) =
-                            Random.step Identifiers.wordGenerator seed1
-
-                        ( c, seed3 ) =
-                            Random.step Identifiers.wordGenerator seed2
-
-                        notebookId =
-                            Identifiers.notebookIdFromWords a b c
-                    in
-                    newModel seed3 notebookId
+                    generateNotebookIdWithoutWords model.randomSeed
 
         NotebookStored _ ->
             ( model, Cmd.none )
@@ -212,6 +180,42 @@ update msg model =
 
                 ( Err _, NotebookOpen _ _ ) ->
                     ( model, Cmd.none )
+
+
+openNotebookInModel : Random.Seed -> NotebookId -> ( Model, Cmd Msg )
+openNotebookInModel newSeed notebookId =
+    ( { randomSeed = newSeed
+      , app = NotebookOpen notebookId exampleNotes
+      }
+    , Cmd.batch
+        [ updateLocation (Identifiers.notebookIdToString notebookId)
+        , insertNotebook NotebookStored notebookId
+        ]
+    )
+
+
+generateNotebookIdFromWords : ( String, String ) -> Random.Seed -> ( Model, Cmd Msg )
+generateNotebookIdFromWords ( a, b ) seed =
+    let
+        ( c, newSeed ) =
+            Random.step Identifiers.wordGenerator seed
+
+        notebookId =
+            Identifiers.notebookIdFromWords a b c
+    in
+    openNotebookInModel newSeed notebookId
+
+
+generateNotebookIdWithoutWords : Random.Seed -> ( Model, Cmd Msg )
+generateNotebookIdWithoutWords seed =
+    let
+        ( a, seed1 ) =
+            Random.step Identifiers.wordGenerator seed
+
+        ( b, seed2 ) =
+            Random.step Identifiers.wordGenerator seed1
+    in
+    generateNotebookIdFromWords ( a, b ) seed2
 
 
 changeNoteId : ClientOnlyNote -> StoredNote -> Dict String Note -> Dict String Note
