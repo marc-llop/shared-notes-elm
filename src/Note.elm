@@ -56,7 +56,7 @@ updateNoteText str note =
 
 
 encodeClientNote : NotebookId -> ClientOnlyNote -> Value
-encodeClientNote notebookId (ClientOnlyNote noteId content) =
+encodeClientNote notebookId (ClientOnlyNote _ content) =
     Encode.object
         [ ( "content", Encode.string content )
         , ( "notebook_id", Encode.string (notebookIdToString notebookId) )
@@ -94,7 +94,7 @@ insertNote toMsg notebookId note =
     postSupabase
         { path = endpoint
         , body = encodeClientNote notebookId note
-        , decoder = noteDecoder
+        , decoder = firstNoteDecoder
         , toMsg = toMsg
         }
 

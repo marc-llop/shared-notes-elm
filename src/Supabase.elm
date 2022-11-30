@@ -18,7 +18,7 @@ headers =
 
 supabaseUrl : String
 supabaseUrl =
-    "https://akgwogzitroqskdmgwqj.supabase.co/rest/v1/"
+    "https://akgwogzitroqskdmgwqj.supabase.co/rest/v1"
 
 
 endpoint : String -> String
