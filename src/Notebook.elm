@@ -1,4 +1,4 @@
-module Notebook exposing (insertNotebook)
+module Notebook exposing (checkNotebookExists, insertNotebook)
 
 import Http
 import Identifiers exposing (NotebookId, notebookIdToString, parseNotebookId)
@@ -62,5 +62,14 @@ insertNotebook toMsg notebookId =
         { path = endpoint
         , body = encodeNotebookId notebookId
         , decoder = notebookIdDecoder
+        , toMsg = toMsg
+        }
+
+
+checkNotebookExists : (Result Http.Error NotebookId -> msg) -> NotebookId -> Cmd msg
+checkNotebookExists toMsg notebookId =
+    getSupabase
+        { path = endpoint ++ "?id=eq." ++ notebookIdToString notebookId
+        , decoder = firstNotebookIdDecoder
         , toMsg = toMsg
         }

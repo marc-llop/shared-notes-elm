@@ -1,4 +1,18 @@
-module Note exposing (ClientOnlyNote, Note(..), StoredNote, exampleNotes, insertNewNote, insertNotes, newNote, noteIdString, noteToPair, noteView, patchNote, updateNoteText)
+module Note exposing
+    ( ClientOnlyNote
+    , Note(..)
+    , StoredNote
+    , exampleNotes
+    , insertNewNote
+    , insertNotes
+    , newNote
+    , noteIdString
+    , noteToPair
+    , noteView
+    , notesDecoder
+    , patchNote
+    , updateNoteText
+    )
 
 import AutoTextarea
 import Html.Styled exposing (Html)
@@ -7,7 +21,7 @@ import Identifiers exposing (NotebookId, notebookIdToString, wordGenerator)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
 import Random exposing (Seed)
-import Supabase exposing (patchSupabase, postSupabase, singletonDecoder, upsertSupabase)
+import Supabase exposing (getSupabase, patchSupabase, postSupabase, singletonDecoder, upsertSupabase)
 import Task exposing (Task)
 
 

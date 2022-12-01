@@ -61,8 +61,8 @@ init { path, randomSeed } =
 
         existingNotebook : NotebookId -> ( App, Cmd Msg )
         existingNotebook notebookId =
-            ( NotebookOpen notebookId exampleNotes
-            , Cmd.none
+            ( OpeningNewNotebook
+            , Notebook.checkNotebookExists NotebookFound notebookId
             )
 
         newApp : ( App, Cmd Msg )
@@ -99,6 +99,7 @@ main =
 
 type Msg
     = WordsFetched (Result Http.Error ( String, String ))
+    | NotebookFound (Result Http.Error NotebookId)
     | NotebookStored (Result Http.Error NotebookId)
     | WriteNote String String
     | AddNote
@@ -116,6 +117,17 @@ update msg model =
 
                 Err _ ->
                     generateNotebookIdWithoutWords model.randomSeed
+
+        NotebookFound result ->
+            case result of
+                Ok notebookId ->
+                    ( { model | app = NotebookOpen notebookId exampleNotes }
+                    , Cmd.none
+                      --TODO fetch notes
+                    )
+
+                Err _ ->
+                    ( model, Identifiers.fetchTwoWords WordsFetched )
 
         NotebookStored _ ->
             ( model, Cmd.none )
