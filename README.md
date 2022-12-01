@@ -4,7 +4,7 @@ A real-time collaborative offline-first notebook written in Elm.
 
 Features:
 
-- [ ] Shareable rooms (a.k.a. notebooks).
+- [x] Shareable rooms (a.k.a. notebooks).
 - [x] Automatic notebook creation on enter.
 - [x] Human-friendly unique notebook IDs.
 - [x] Add, update and delete notes.
