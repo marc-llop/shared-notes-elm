@@ -105,7 +105,7 @@ type Msg
     | WriteNote String String
     | AddNote
     | NoteStored ClientOnlyNote (Result Http.Error StoredNote)
-    | NoteUpdated Note (Result Http.Error StoredNote)
+    | NoteUpdated StoredNote (Result Http.Error StoredNote)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -147,18 +147,15 @@ update msg model =
                         Nothing ->
                             Cmd.none
 
-                        Just note ->
-                            Note.updateNote (NoteUpdated note) notebookId note
+                        Just (ClientOnly note) ->
+                            Cmd.none
+
+                        Just (Stored note) ->
+                            Note.patchNote (NoteUpdated note) notebookId note
                     )
 
         NoteUpdated oldNote result ->
-            case oldNote of
-                Stored _ ->
-                    ( model, Cmd.none )
-
-                ClientOnly note ->
-                    -- TODO: Avoid double adding a note when a NoteUpdated message arrives before the last one has had time to update the model.
-                    updateStoredNoteIdInModel note result model
+            ( model, Cmd.none )
 
         AddNote ->
             let
@@ -184,7 +181,7 @@ update msg model =
                             NotebookOpen nId (Dict.insert noteId newNote notes)
                     in
                     ( { randomSeed = newSeed, app = newApp }
-                    , Note.insertNote (NoteStored note) nId note
+                    , Note.insertNewNote (NoteStored note) nId
                     )
 
         NoteStored oldNote result ->

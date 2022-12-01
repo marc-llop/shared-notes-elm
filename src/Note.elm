@@ -1,4 +1,4 @@
-module Note exposing (ClientOnlyNote, Note(..), StoredNote, exampleNotes, insertNote, newNote, noteIdString, noteToPair, noteView, updateNote, updateNoteText)
+module Note exposing (ClientOnlyNote, Note(..), StoredNote, exampleNotes, insertNewNote, insertNotes, newNote, noteIdString, noteToPair, noteView, patchNote, updateNoteText)
 
 import AutoTextarea
 import Html.Styled exposing (Html)
@@ -7,7 +7,7 @@ import Identifiers exposing (NotebookId, notebookIdToString, wordGenerator)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
 import Random exposing (Seed)
-import Supabase exposing (postSupabase, singletonDecoder, upsertSupabase)
+import Supabase exposing (patchSupabase, postSupabase, singletonDecoder, upsertSupabase)
 import Task exposing (Task)
 
 
@@ -87,6 +87,11 @@ encodeNoteList notebookId notes =
     Encode.list (encodeNote notebookId) notes
 
 
+encodeClientNoteList : NotebookId -> List ClientOnlyNote -> Value
+encodeClientNoteList notebookId notes =
+    Encode.list (encodeClientNote notebookId) notes
+
+
 noteDecoder : Decoder StoredNote
 noteDecoder =
     Decode.map2
@@ -95,35 +100,51 @@ noteDecoder =
         (Decode.field "content" Decode.string)
 
 
+notesDecoder : Decoder (List StoredNote)
+notesDecoder =
+    Decode.list noteDecoder
+
+
 firstNoteDecoder : Decoder StoredNote
 firstNoteDecoder =
     singletonDecoder noteDecoder
 
 
-endpoint : String
-endpoint =
+notesEndpoint : String
+notesEndpoint =
     "notes"
 
 
-insertNote : (Result Http.Error StoredNote -> msg) -> NotebookId -> ClientOnlyNote -> Cmd msg
-insertNote toMsg notebookId note =
+noteEndpoint : NotebookId -> StoredNote -> String
+noteEndpoint notebookId (StoredNote noteId content) =
+    notesEndpoint ++ "?id=eq." ++ String.fromInt noteId ++ "&notebook_id=eq." ++ notebookIdToString notebookId
+
+
+insertNotes : (Result Http.Error (List StoredNote) -> msg) -> NotebookId -> List ClientOnlyNote -> Cmd msg
+insertNotes toMsg notebookId notes =
     postSupabase
-        { path = endpoint
-        , body = encodeClientNote notebookId note
+        { path = notesEndpoint
+        , body = encodeClientNoteList notebookId notes
+        , decoder = notesDecoder
+        , toMsg = toMsg
+        }
+
+
+insertNewNote : (Result Http.Error StoredNote -> msg) -> NotebookId -> Cmd msg
+insertNewNote toMsg notebookId =
+    postSupabase
+        { path = notesEndpoint
+        , body = encodeClientNote notebookId (ClientOnlyNote "" "")
         , decoder = firstNoteDecoder
         , toMsg = toMsg
         }
 
 
-updateNote : (Result Http.Error StoredNote -> msg) -> NotebookId -> Note -> Cmd msg
-updateNote toMsg notebookId note =
-    let
-        noteId =
-            noteIdString note
-    in
-    upsertSupabase
-        { path = endpoint ++ "?id=eq." ++ noteId ++ "&notebook_id=eq." ++ notebookIdToString notebookId
-        , body = encodeNoteList notebookId [ note ]
+patchNote : (Result Http.Error StoredNote -> msg) -> NotebookId -> StoredNote -> Cmd msg
+patchNote toMsg notebookId note =
+    patchSupabase
+        { path = noteEndpoint notebookId note
+        , body = encodeStoredNote notebookId note
         , decoder = firstNoteDecoder
         , toMsg = toMsg
         }
