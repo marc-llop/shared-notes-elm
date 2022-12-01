@@ -80,13 +80,11 @@ init { path, randomSeed } =
                 _ ->
                     newNotebook
     in
-    Tuple.mapFirst
-        (\app ->
-            { randomSeed = Random.initialSeed randomSeed
-            , app = app
-            }
-        )
-        newApp
+    ( { randomSeed = Random.initialSeed randomSeed
+      , app = Tuple.first newApp
+      }
+    , Tuple.second newApp
+    )
 
 
 main : Program Flags Model Msg
