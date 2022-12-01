@@ -1,10 +1,11 @@
-module Notebook exposing (checkNotebookExists, insertNotebook)
+module Notebook exposing (checkNotebookExists, getNotebookNotes, insertNotebook)
 
 import Http
 import Identifiers exposing (NotebookId, notebookIdToString, parseNotebookId)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
-import Supabase exposing (postSupabase, singletonDecoder)
+import Note exposing (StoredNote, notesDecoder)
+import Supabase exposing (getSupabase, postSupabase, singletonDecoder)
 import Task exposing (Task)
 
 
@@ -71,5 +72,19 @@ checkNotebookExists toMsg notebookId =
     getSupabase
         { path = endpoint ++ "?id=eq." ++ notebookIdToString notebookId
         , decoder = firstNotebookIdDecoder
+        , toMsg = toMsg
+        }
+
+
+notebookNotesDecoder : Decoder (List StoredNote)
+notebookNotesDecoder =
+    singletonDecoder (Decode.field "notes" notesDecoder)
+
+
+getNotebookNotes : (Result Http.Error (List StoredNote) -> msg) -> NotebookId -> Cmd msg
+getNotebookNotes toMsg notebookId =
+    getSupabase
+        { path = endpoint ++ "?id=eq." ++ notebookIdToString notebookId ++ "&select=notes(*)"
+        , decoder = notebookNotesDecoder
         , toMsg = toMsg
         }

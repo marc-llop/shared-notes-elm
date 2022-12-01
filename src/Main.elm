@@ -29,7 +29,7 @@ type alias Notes =
 
 
 type App
-    = OpeningNewNotebook
+    = OpeningNotebook
     | NotebookOpen NotebookId Notes
 
 
@@ -39,9 +39,9 @@ type alias Model =
     }
 
 
-exampleNotes : Notes
-exampleNotes =
-    Note.exampleNotes
+dictFromNotes : List StoredNote -> Notes
+dictFromNotes noteList =
+    List.map Stored noteList
         |> List.map noteToPair
         |> Dict.fromList
 
@@ -55,13 +55,13 @@ init { path, randomSeed } =
     let
         newNotebook : ( App, Cmd Msg )
         newNotebook =
-            ( OpeningNewNotebook
+            ( OpeningNotebook
             , Identifiers.fetchTwoWords WordsFetched
             )
 
         existingNotebook : NotebookId -> ( App, Cmd Msg )
         existingNotebook notebookId =
-            ( OpeningNewNotebook
+            ( OpeningNotebook
             , Notebook.checkNotebookExists NotebookFound notebookId
             )
 
@@ -100,6 +100,7 @@ main =
 type Msg
     = WordsFetched (Result Http.Error ( String, String ))
     | NotebookFound (Result Http.Error NotebookId)
+    | NotebookFetched NotebookId (Result Http.Error (List StoredNote))
     | NotebookStored (Result Http.Error NotebookId)
     | WriteNote String String
     | AddNote
@@ -119,22 +120,39 @@ update msg model =
                     generateNotebookIdWithoutWords model.randomSeed
 
         NotebookFound result ->
-            case result of
-                Ok notebookId ->
-                    ( { model | app = NotebookOpen notebookId exampleNotes }
-                    , Cmd.none
-                      --TODO fetch notes
+            case ( result, model.app ) of
+                ( Ok notebookId, OpeningNotebook ) ->
+                    ( model
+                    , Notebook.getNotebookNotes (NotebookFetched notebookId) notebookId
                     )
 
-                Err _ ->
+                ( Err _, OpeningNotebook ) ->
                     ( model, Identifiers.fetchTwoWords WordsFetched )
+
+                ( _, NotebookOpen _ _ ) ->
+                    ( model, Cmd.none )
+
+        NotebookFetched notebookId result ->
+            case ( result, model.app ) of
+                ( Ok notes, OpeningNotebook ) ->
+                    ( { model | app = NotebookOpen notebookId (dictFromNotes notes) }
+                    , Cmd.none
+                    )
+
+                ( Err _, OpeningNotebook ) ->
+                    ( { model | app = NotebookOpen notebookId Dict.empty }
+                    , Cmd.none
+                    )
+
+                ( _, NotebookOpen _ _ ) ->
+                    ( model, Cmd.none )
 
         NotebookStored _ ->
             ( model, Cmd.none )
 
         WriteNote noteId value ->
             case model.app of
-                OpeningNewNotebook ->
+                OpeningNotebook ->
                     ( model, Cmd.none )
 
                 NotebookOpen notebookId notes ->
@@ -173,7 +191,7 @@ update msg model =
                     Note.newNote model.randomSeed
             in
             case model.app of
-                OpeningNewNotebook ->
+                OpeningNotebook ->
                     ( model, Cmd.none )
 
                 NotebookOpen nId notes ->
@@ -201,7 +219,7 @@ update msg model =
 updateStoredNoteIdInModel : ClientOnlyNote -> Result Http.Error StoredNote -> Model -> ( Model, Cmd Msg )
 updateStoredNoteIdInModel oldNote result model =
     case ( result, model.app ) of
-        ( _, OpeningNewNotebook ) ->
+        ( _, OpeningNotebook ) ->
             ( model, Cmd.none )
 
         ( Ok storedNote, NotebookOpen nId notes ) ->
@@ -215,10 +233,10 @@ updateStoredNoteIdInModel oldNote result model =
             ( model, Cmd.none )
 
 
-openNotebookInModel : Random.Seed -> NotebookId -> ( Model, Cmd Msg )
-openNotebookInModel newSeed notebookId =
+openNewNotebookInModel : Random.Seed -> NotebookId -> ( Model, Cmd Msg )
+openNewNotebookInModel newSeed notebookId =
     ( { randomSeed = newSeed
-      , app = NotebookOpen notebookId exampleNotes
+      , app = NotebookOpen notebookId Dict.empty
       }
     , Cmd.batch
         [ updateLocation (Identifiers.notebookIdToString notebookId)
@@ -236,7 +254,7 @@ generateNotebookIdFromWords ( a, b ) seed =
         notebookId =
             Identifiers.notebookIdFromWords a b c
     in
-    openNotebookInModel newSeed notebookId
+    openNewNotebookInModel newSeed notebookId
 
 
 generateNotebookIdWithoutWords : Random.Seed -> ( Model, Cmd Msg )
@@ -307,7 +325,7 @@ view model =
         notebook : Html Msg
         notebook =
             case model.app of
-                OpeningNewNotebook ->
+                OpeningNotebook ->
                     spinner
 
                 NotebookOpen notebookId notes ->
