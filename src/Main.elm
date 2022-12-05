@@ -110,6 +110,16 @@ type Msg
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
+    case model.app of
+        OpeningNotebook ->
+            updateOpeningNotebook msg model
+
+        NotebookOpen notebookId notes ->
+            updateOpenNotebook msg model notebookId notes
+
+
+updateOpeningNotebook : Msg -> Model -> ( Model, Cmd Msg )
+updateOpeningNotebook msg model =
     case msg of
         WordsFetched result ->
             case result of
@@ -120,116 +130,119 @@ update msg model =
                     generateNotebookIdWithoutWords model.randomSeed
 
         NotebookFound result ->
-            case ( result, model.app ) of
-                ( Ok notebookId, OpeningNotebook ) ->
+            case result of
+                Ok notebookId ->
                     ( model
                     , Notebook.getNotebookNotes (NotebookFetched notebookId) notebookId
                     )
 
-                ( Err _, OpeningNotebook ) ->
+                Err _ ->
                     ( model, Identifiers.fetchTwoWords WordsFetched )
 
-                ( _, NotebookOpen _ _ ) ->
-                    ( model, Cmd.none )
-
         NotebookFetched notebookId result ->
-            case ( result, model.app ) of
-                ( Ok notes, OpeningNotebook ) ->
+            case result of
+                Ok notes ->
                     ( { model | app = NotebookOpen notebookId (dictFromNotes notes) }
                     , Cmd.none
                     )
 
-                ( Err _, OpeningNotebook ) ->
+                Err _ ->
                     ( { model | app = NotebookOpen notebookId Dict.empty }
                     , Cmd.none
                     )
 
-                ( _, NotebookOpen _ _ ) ->
-                    ( model, Cmd.none )
+        NotebookStored _ ->
+            ( model, Cmd.none )
+
+        WriteNote _ _ ->
+            ( model, Cmd.none )
+
+        AddNote ->
+            ( model, Cmd.none )
+
+        NoteStored _ _ ->
+            ( model, Cmd.none )
+
+        NoteUpdated _ _ ->
+            ( model, Cmd.none )
+
+
+updateOpenNotebook : Msg -> Model -> NotebookId -> Notes -> ( Model, Cmd Msg )
+updateOpenNotebook msg model notebookId notes =
+    case msg of
+        WordsFetched _ ->
+            ( model, Cmd.none )
+
+        NotebookFound _ ->
+            ( model, Cmd.none )
+
+        NotebookFetched _ _ ->
+            ( model, Cmd.none )
 
         NotebookStored _ ->
             ( model, Cmd.none )
 
         WriteNote noteId value ->
-            case model.app of
-                OpeningNotebook ->
-                    ( model, Cmd.none )
+            let
+                maybeNewNote : Maybe Note
+                maybeNewNote =
+                    Dict.get noteId notes
+                        |> Maybe.map (Note.updateNoteText value)
 
-                NotebookOpen notebookId notes ->
-                    let
-                        maybeNewNote : Maybe Note
-                        maybeNewNote =
-                            Dict.get noteId notes
-                                |> Maybe.map (Note.updateNoteText value)
+                updateInDict : Maybe Note -> Maybe Note
+                updateInDict =
+                    Maybe.andThen (\_ -> maybeNewNote)
+            in
+            ( { model
+                | app =
+                    NotebookOpen notebookId
+                        (Dict.update noteId updateInDict notes)
+              }
+            , case maybeNewNote of
+                Nothing ->
+                    Cmd.none
 
-                        updateInDict : Maybe Note -> Maybe Note
-                        updateInDict =
-                            Maybe.andThen (\_ -> maybeNewNote)
-                    in
-                    ( { model
-                        | app =
-                            NotebookOpen notebookId
-                                (Dict.update noteId updateInDict notes)
-                      }
-                    , case maybeNewNote of
-                        Nothing ->
-                            Cmd.none
+                Just (ClientOnly note) ->
+                    Cmd.none
 
-                        Just (ClientOnly note) ->
-                            Cmd.none
-
-                        Just (Stored note) ->
-                            Note.patchNote (NoteUpdated note) notebookId note
-                    )
-
-        NoteUpdated oldNote result ->
-            ( model, Cmd.none )
+                Just (Stored note) ->
+                    Note.patchNote (NoteUpdated note) notebookId note
+            )
 
         AddNote ->
             let
                 ( note, newSeed ) =
                     Note.newNote model.randomSeed
+
+                newNote : Note
+                newNote =
+                    ClientOnly note
+
+                noteId : String
+                noteId =
+                    Note.noteIdString newNote
+
+                newApp : App
+                newApp =
+                    NotebookOpen notebookId (Dict.insert noteId newNote notes)
             in
-            case model.app of
-                OpeningNotebook ->
-                    ( model, Cmd.none )
-
-                NotebookOpen nId notes ->
-                    let
-                        newNote : Note
-                        newNote =
-                            ClientOnly note
-
-                        noteId : String
-                        noteId =
-                            Note.noteIdString newNote
-
-                        newApp : App
-                        newApp =
-                            NotebookOpen nId (Dict.insert noteId newNote notes)
-                    in
-                    ( { randomSeed = newSeed, app = newApp }
-                    , Note.insertNewNote (NoteStored note) nId
-                    )
-
-        NoteStored oldNote result ->
-            updateStoredNoteIdInModel oldNote result model
-
-
-updateStoredNoteIdInModel : ClientOnlyNote -> Result Http.Error StoredNote -> Model -> ( Model, Cmd Msg )
-updateStoredNoteIdInModel oldNote result model =
-    case ( result, model.app ) of
-        ( _, OpeningNotebook ) ->
-            ( model, Cmd.none )
-
-        ( Ok storedNote, NotebookOpen nId notes ) ->
-            ( { model
-                | app = NotebookOpen nId (changeNoteId oldNote storedNote notes)
-              }
-            , Cmd.none
+            ( { randomSeed = newSeed, app = newApp }
+            , Note.insertNewNote (NoteStored note) notebookId
             )
 
-        ( Err _, NotebookOpen _ _ ) ->
+        NoteStored oldNote result ->
+            case result of
+                Ok storedNote ->
+                    ( { model
+                        | app = NotebookOpen notebookId (changeNoteId oldNote storedNote notes)
+                      }
+                    , Cmd.none
+                    )
+
+                Err _ ->
+                    ( model, Cmd.none )
+
+        NoteUpdated oldNote result ->
             ( model, Cmd.none )
 
 
