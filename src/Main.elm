@@ -100,12 +100,12 @@ main =
 type Msg
     = WordsFetched (Result Http.Error ( String, String ))
     | NotebookFound (Result Http.Error NotebookId)
-    | NotebookFetched NotebookId (Result Http.Error (List StoredNote))
+    | NotebookFetched NotebookId (Result Http.Error ( List StoredNote, Random.Seed ))
     | NotebookStored (Result Http.Error NotebookId)
     | WriteNote String String
     | AddNote
-    | NoteStored ClientOnlyNote (Result Http.Error StoredNote)
-    | NoteUpdated StoredNote (Result Http.Error StoredNote)
+    | NoteStored ClientOnlyNote (Result Http.Error ( StoredNote, Random.Seed ))
+    | NoteUpdated StoredNote (Result Http.Error ( StoredNote, Random.Seed ))
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -133,7 +133,7 @@ updateOpeningNotebook msg model =
             case result of
                 Ok notebookId ->
                     ( model
-                    , Notebook.getNotebookNotes (NotebookFetched notebookId) notebookId
+                    , Notebook.getNotebookNotes model.randomSeed (NotebookFetched notebookId) notebookId
                     )
 
                 Err _ ->
@@ -141,8 +141,11 @@ updateOpeningNotebook msg model =
 
         NotebookFetched notebookId result ->
             case result of
-                Ok notes ->
-                    ( { model | app = NotebookOpen notebookId (dictFromNotes notes) }
+                Ok ( notes, newSeed ) ->
+                    ( { model
+                        | app = NotebookOpen notebookId (dictFromNotes notes)
+                        , randomSeed = newSeed
+                      }
                     , Cmd.none
                     )
 
@@ -206,7 +209,7 @@ updateOpenNotebook msg model notebookId notes =
                     Cmd.none
 
                 Just (Stored note) ->
-                    Note.patchNote (NoteUpdated note) notebookId note
+                    Note.patchNote model.randomSeed (NoteUpdated note) notebookId note
             )
 
         AddNote ->
@@ -227,14 +230,15 @@ updateOpenNotebook msg model notebookId notes =
                     NotebookOpen notebookId (Dict.insert noteId newNote notes)
             in
             ( { randomSeed = newSeed, app = newApp }
-            , Note.insertNewNote (NoteStored note) notebookId
+            , Note.insertNewNote model.randomSeed (NoteStored note) notebookId
             )
 
         NoteStored oldNote result ->
             case result of
-                Ok storedNote ->
+                Ok ( storedNote, newSeed ) ->
                     ( { model
                         | app = NotebookOpen notebookId (changeNoteId oldNote storedNote notes)
+                        , randomSeed = newSeed
                       }
                     , Cmd.none
                     )
@@ -243,7 +247,14 @@ updateOpenNotebook msg model notebookId notes =
                     ( model, Cmd.none )
 
         NoteUpdated oldNote result ->
-            ( model, Cmd.none )
+            case result of
+                Ok ( newNote, newSeed ) ->
+                    ( { model | randomSeed = newSeed }
+                    , Cmd.none
+                    )
+
+                Err _ ->
+                    ( model, Cmd.none )
 
 
 openNewNotebookInModel : Random.Seed -> NotebookId -> ( Model, Cmd Msg )

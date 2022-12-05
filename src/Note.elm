@@ -9,8 +9,8 @@ module Note exposing
     , noteIdString
     , noteToPair
     , noteView
-    , notesDecoder
     , patchNote
+    , storedNotesDecoder
     , updateNoteText
     )
 
@@ -31,31 +31,45 @@ type Note
 
 
 type ClientOnlyNote
-    = ClientOnlyNote String String
+    = ClientOnlyNote ClientId String
 
 
 type StoredNote
-    = StoredNote Int String
+    = StoredNote ServerId ClientId String
+
+
+type alias ClientId =
+    String
+
+
+type alias ServerId =
+    Int
 
 
 noteIdString : Note -> String
 noteIdString note =
     case note of
-        ClientOnly (ClientOnlyNote id _) ->
-            id
+        ClientOnly (ClientOnlyNote clientId _) ->
+            clientId
 
-        Stored (StoredNote id _) ->
-            String.fromInt id
+        Stored (StoredNote _ clientId _) ->
+            clientId
+
+
+newClientId : Seed -> ( ClientId, Seed )
+newClientId seed =
+    Random.step wordGenerator seed
+        |> Tuple.mapFirst (\noteId -> "clientId-" ++ noteId)
 
 
 newNote : Seed -> ( ClientOnlyNote, Seed )
 newNote seed =
     let
-        newNoteWithId : String -> ClientOnlyNote
+        newNoteWithId : ClientId -> ClientOnlyNote
         newNoteWithId noteId =
-            ClientOnlyNote ("clientId-" ++ noteId) ""
+            ClientOnlyNote noteId ""
     in
-    Random.step wordGenerator seed
+    newClientId seed
         |> Tuple.mapFirst newNoteWithId
 
 
@@ -65,8 +79,8 @@ updateNoteText str note =
         ClientOnly (ClientOnlyNote id _) ->
             ClientOnly (ClientOnlyNote id str)
 
-        Stored (StoredNote id _) ->
-            Stored (StoredNote id str)
+        Stored (StoredNote serverId clientId _) ->
+            Stored (StoredNote serverId clientId str)
 
 
 encodeClientNote : NotebookId -> ClientOnlyNote -> Value
@@ -78,9 +92,9 @@ encodeClientNote notebookId (ClientOnlyNote _ content) =
 
 
 encodeStoredNote : NotebookId -> StoredNote -> Value
-encodeStoredNote notebookId (StoredNote noteId content) =
+encodeStoredNote notebookId (StoredNote serverId clientId content) =
     Encode.object
-        [ ( "id", Encode.int noteId )
+        [ ( "id", Encode.int serverId )
         , ( "content", Encode.string content )
         , ( "notebook_id", Encode.string (notebookIdToString notebookId) )
         ]
@@ -106,20 +120,26 @@ encodeClientNoteList notebookId notes =
     Encode.list (encodeClientNote notebookId) notes
 
 
-noteDecoder : Decoder StoredNote
+noteDecoder : Decoder ( ServerId, String )
 noteDecoder =
     Decode.map2
-        StoredNote
+        Tuple.pair
         (Decode.field "id" Decode.int)
         (Decode.field "content" Decode.string)
 
 
-notesDecoder : Decoder (List StoredNote)
+notesDecoder : Decoder (List ( ServerId, String ))
 notesDecoder =
     Decode.list noteDecoder
 
 
-firstNoteDecoder : Decoder StoredNote
+storedNotesDecoder : Seed -> Decoder ( List StoredNote, Seed )
+storedNotesDecoder seed =
+    notesDecoder
+        |> Decode.map (initializeIds seed)
+
+
+firstNoteDecoder : Decoder ( ServerId, String )
 firstNoteDecoder =
     singletonDecoder noteDecoder
 
@@ -130,36 +150,36 @@ notesEndpoint =
 
 
 noteEndpoint : NotebookId -> StoredNote -> String
-noteEndpoint notebookId (StoredNote noteId content) =
-    notesEndpoint ++ "?id=eq." ++ String.fromInt noteId ++ "&notebook_id=eq." ++ notebookIdToString notebookId
+noteEndpoint notebookId (StoredNote serverId _ content) =
+    notesEndpoint ++ "?id=eq." ++ String.fromInt serverId ++ "&notebook_id=eq." ++ notebookIdToString notebookId
 
 
-insertNotes : (Result Http.Error (List StoredNote) -> msg) -> NotebookId -> List ClientOnlyNote -> Cmd msg
-insertNotes toMsg notebookId notes =
+insertNotes : Seed -> (Result Http.Error ( List StoredNote, Seed ) -> msg) -> NotebookId -> List ClientOnlyNote -> Cmd msg
+insertNotes seed toMsg notebookId notes =
     postSupabase
         { path = notesEndpoint
         , body = encodeClientNoteList notebookId notes
-        , decoder = notesDecoder
+        , decoder = storedNotesDecoder seed
         , toMsg = toMsg
         }
 
 
-insertNewNote : (Result Http.Error StoredNote -> msg) -> NotebookId -> Cmd msg
-insertNewNote toMsg notebookId =
+insertNewNote : Seed -> (Result Http.Error ( StoredNote, Seed ) -> msg) -> NotebookId -> Cmd msg
+insertNewNote seed toMsg notebookId =
     postSupabase
         { path = notesEndpoint
         , body = encodeClientNote notebookId (ClientOnlyNote "" "")
-        , decoder = firstNoteDecoder
+        , decoder = Decode.map (newStoredNote seed) firstNoteDecoder
         , toMsg = toMsg
         }
 
 
-patchNote : (Result Http.Error StoredNote -> msg) -> NotebookId -> StoredNote -> Cmd msg
-patchNote toMsg notebookId note =
+patchNote : Seed -> (Result Http.Error ( StoredNote, Seed ) -> msg) -> NotebookId -> StoredNote -> Cmd msg
+patchNote seed toMsg notebookId note =
     patchSupabase
         { path = noteEndpoint notebookId note
         , body = encodeStoredNote notebookId note
-        , decoder = firstNoteDecoder
+        , decoder = Decode.map (newStoredNote seed) firstNoteDecoder
         , toMsg = toMsg
         }
 
@@ -182,7 +202,7 @@ noteView { note, onInput } =
                 ClientOnly (ClientOnlyNote _ c) ->
                     c
 
-                Stored (StoredNote _ c) ->
+                Stored (StoredNote _ _ c) ->
                     c
     in
     ( noteId
@@ -204,3 +224,27 @@ exampleNotes =
     , ClientOnlyNote "clientId-6" "Regenerate notebook ID upon primary key constraint violation on insert."
     ]
         |> List.map ClientOnly
+
+
+newStoredNote : Seed -> ( ServerId, String ) -> ( StoredNote, Seed )
+newStoredNote seed ( serverId, content ) =
+    newClientId seed
+        |> Tuple.mapFirst
+            (\clientId -> StoredNote serverId clientId content)
+
+
+initializeIds : Seed -> List ( ServerId, String ) -> ( List StoredNote, Seed )
+initializeIds seed list =
+    case list of
+        [] ->
+            ( [], seed )
+
+        x :: rest ->
+            let
+                ( note, newSeed ) =
+                    newStoredNote seed x
+
+                ( restOfNotes, finalSeed ) =
+                    initializeIds newSeed rest
+            in
+            ( note :: restOfNotes, finalSeed )

@@ -4,7 +4,8 @@ import Http
 import Identifiers exposing (NotebookId, notebookIdToString, parseNotebookId)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
-import Note exposing (StoredNote, notesDecoder)
+import Note exposing (StoredNote, storedNotesDecoder)
+import Random exposing (Seed)
 import Supabase exposing (getSupabase, postSupabase, singletonDecoder)
 import Task exposing (Task)
 
@@ -76,15 +77,15 @@ checkNotebookExists toMsg notebookId =
         }
 
 
-notebookNotesDecoder : Decoder (List StoredNote)
-notebookNotesDecoder =
-    singletonDecoder (Decode.field "notes" notesDecoder)
+notebookNotesDecoder : Seed -> Decoder ( List StoredNote, Seed )
+notebookNotesDecoder seed =
+    singletonDecoder (Decode.field "notes" (storedNotesDecoder seed))
 
 
-getNotebookNotes : (Result Http.Error (List StoredNote) -> msg) -> NotebookId -> Cmd msg
-getNotebookNotes toMsg notebookId =
+getNotebookNotes : Seed -> (Result Http.Error ( List StoredNote, Seed ) -> msg) -> NotebookId -> Cmd msg
+getNotebookNotes seed toMsg notebookId =
     getSupabase
         { path = endpoint ++ "?id=eq." ++ notebookIdToString notebookId ++ "&select=notes(*)"
-        , decoder = notebookNotesDecoder
+        , decoder = notebookNotesDecoder seed
         , toMsg = toMsg
         }
