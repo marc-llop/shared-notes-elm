@@ -104,7 +104,7 @@ type Msg
     | NotebookStored (Result Http.Error NotebookId)
     | WriteNote String String
     | AddNote
-    | NoteStored ClientOnlyNote (Result Http.Error ( StoredNote, Random.Seed ))
+    | NoteStored (Result Http.Error StoredNote)
     | NoteUpdated StoredNote (Result Http.Error ( StoredNote, Random.Seed ))
 
 
@@ -163,7 +163,7 @@ updateOpeningNotebook msg model =
         AddNote ->
             ( model, Cmd.none )
 
-        NoteStored _ _ ->
+        NoteStored _ ->
             ( model, Cmd.none )
 
         NoteUpdated _ _ ->
@@ -230,15 +230,14 @@ updateOpenNotebook msg model notebookId notes =
                     NotebookOpen notebookId (Dict.insert noteId newNote notes)
             in
             ( { randomSeed = newSeed, app = newApp }
-            , Note.insertNewNote model.randomSeed (NoteStored note) notebookId
+            , Note.insertNewNote note NoteStored notebookId
             )
 
-        NoteStored oldNote result ->
+        NoteStored result ->
             case result of
-                Ok ( storedNote, newSeed ) ->
+                Ok storedNote ->
                     ( { model
-                        | app = NotebookOpen notebookId (changeNoteId oldNote storedNote notes)
-                        , randomSeed = newSeed
+                        | app = NotebookOpen notebookId (updateNoteToStored storedNote notes)
                       }
                     , Cmd.none
                     )
@@ -293,19 +292,18 @@ generateNotebookIdWithoutWords seed =
     generateNotebookIdFromWords ( a, b ) seed2
 
 
-changeNoteId : ClientOnlyNote -> StoredNote -> Dict String Note -> Dict String Note
-changeNoteId oldNote storedNote notes =
+updateNoteToStored : StoredNote -> Dict String Note -> Dict String Note
+updateNoteToStored storedNote notes =
     let
         note : Note
         note =
             Stored storedNote
 
-        oldId : String
-        oldId =
-            noteIdString (ClientOnly oldNote)
+        updateNote : Maybe Note -> Maybe Note
+        updateNote =
+            Maybe.map (\_ -> note)
     in
-    Dict.remove oldId notes
-        |> Dict.insert (noteIdString note) note
+    Dict.update (noteIdString note) updateNote notes
 
 
 buttonRow : Html msg

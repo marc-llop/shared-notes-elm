@@ -164,12 +164,12 @@ insertNotes seed toMsg notebookId notes =
         }
 
 
-insertNewNote : Seed -> (Result Http.Error ( StoredNote, Seed ) -> msg) -> NotebookId -> Cmd msg
-insertNewNote seed toMsg notebookId =
+insertNewNote : ClientOnlyNote -> (Result Http.Error StoredNote -> msg) -> NotebookId -> Cmd msg
+insertNewNote oldNote toMsg notebookId =
     postSupabase
         { path = notesEndpoint
-        , body = encodeClientNote notebookId (ClientOnlyNote "" "")
-        , decoder = Decode.map (newStoredNote seed) firstNoteDecoder
+        , body = encodeClientNote notebookId oldNote
+        , decoder = Decode.map (storedNoteFromClientNote oldNote) firstNoteDecoder
         , toMsg = toMsg
         }
 
@@ -231,6 +231,11 @@ newStoredNote seed ( serverId, content ) =
     newClientId seed
         |> Tuple.mapFirst
             (\clientId -> StoredNote serverId clientId content)
+
+
+storedNoteFromClientNote : ClientOnlyNote -> ( ServerId, String ) -> StoredNote
+storedNoteFromClientNote (ClientOnlyNote clientId _) ( serverId, content ) =
+    StoredNote serverId clientId content
 
 
 initializeIds : Seed -> List ( ServerId, String ) -> ( List StoredNote, Seed )
