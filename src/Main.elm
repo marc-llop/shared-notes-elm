@@ -27,7 +27,6 @@ port updateLocation : String -> Cmd msg
 type alias Notes =
     Dict String Note
 
-
 type App
     = OpeningNotebook
     | NotebookOpen NotebookId Notes
@@ -106,6 +105,8 @@ type Msg
     | AddNote
     | NoteStored (Result Http.Error Note)
     | NoteUpdated Note (Result Http.Error ( Note, Random.Seed ))
+    | DeleteNote Note
+    | NoteDeleted Note (Result Http.Error ())
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -167,6 +168,12 @@ updateOpeningNotebook msg model =
             ( model, Cmd.none )
 
         NoteUpdated _ _ ->
+            ( model, Cmd.none )
+
+        DeleteNote _ ->
+            ( model, Cmd.none )
+
+        NoteDeleted _ _ ->
             ( model, Cmd.none )
 
 
@@ -248,6 +255,20 @@ updateOpenNotebook msg model notebookId notes =
                 Err _ ->
                     ( model, Cmd.none )
 
+        DeleteNote note ->
+            ( model
+            , Note.deleteNote (NoteDeleted note) notebookId note
+            )
+
+        NoteDeleted note result ->
+            case result of
+                Ok () ->
+                    ( { model | app = NotebookOpen notebookId (Dict.remove (Note.noteIdString note) notes) }
+                    , Cmd.none
+                    )
+
+                Err _ ->
+                    ( model, Cmd.none )
 
 openNewNotebookInModel : Random.Seed -> NotebookId -> ( Model, Cmd Msg )
 openNewNotebookInModel newSeed notebookId =
@@ -319,7 +340,11 @@ openNotebook notebookId notes =
             Dict.toList notes
                 |> List.map Tuple.second
                 |> List.sortBy Note.noteOrder
-                |> List.map (\note -> noteView { note = note, onInput = WriteNote })
+                |> List.map (\note -> noteView
+                    { note = note
+                    , onInput = WriteNote
+                    , onDelete = DeleteNote
+                    })
     in
     div [ class "notebook" ]
         [ span [] [ text <| Identifiers.notebookIdToString notebookId ]

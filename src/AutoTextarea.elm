@@ -79,10 +79,11 @@ deleteButtonStyles =
 autoTextarea :
     { value : String
     , onInput : String -> msg
+    , onDelete : msg
     , placeholder : String
     }
     -> Html msg
-autoTextarea { value, onInput, placeholder } =
+autoTextarea { value, onInput, onDelete, placeholder } =
     div [ css autoExpandStyles ]
         [ textarea
             [ css textareaStyles
@@ -98,7 +99,7 @@ autoTextarea { value, onInput, placeholder } =
             [ text (value ++ "_") ]
         , button
             [ css deleteButtonStyles
-            , Events.onClick (onInput value)
+            , Events.onClick onDelete
             , Attributes.attribute "aria-label" "Delete note"
             , Attributes.title "Delete note"
             ]

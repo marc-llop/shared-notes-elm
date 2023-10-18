@@ -8,6 +8,7 @@ module Note exposing
     , noteToPair
     , noteView
     , patchNote
+    , deleteNote
     , storedNotesDecoder
     , updateNoteText
     , noteOrder
@@ -20,8 +21,9 @@ import Identifiers exposing (NotebookId, notebookIdToString, wordGenerator)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
 import Random exposing (Seed)
-import Supabase exposing (getSupabase, patchSupabase, postSupabase, singletonDecoder, upsertSupabase)
+import Supabase exposing (getSupabase, patchSupabase, postSupabase, deleteSupabase, singletonDecoder, upsertSupabase)
 import Task exposing (Task)
+import Supabase exposing (deleteSupabase)
 
 
 type Note
@@ -169,6 +171,17 @@ patchNote seed toMsg notebookId note =
                 , toMsg = toMsg
                 }
 
+deleteNote : (Result Http.Error () -> msg) -> NotebookId -> Note -> Cmd msg
+deleteNote toMsg notebookId note =
+    case note of
+        ClientOnly _ _ ->
+            Cmd.none
+
+        Stored serverId _ _ ->
+            deleteSupabase
+                { path = noteEndpoint notebookId serverId
+                , toMsg = toMsg
+                }
 
 noteToPair : Note -> ( String, Note )
 noteToPair note =
@@ -184,8 +197,13 @@ noteOrder note =
         Stored serverId _ _ -> serverId
         ClientOnly _ _ -> 0
 
-noteView : { note : Note, onInput : String -> String -> msg } -> ( String, Html msg )
-noteView { note, onInput } =
+noteView : 
+    { note : Note
+    , onInput : String -> String -> msg
+    , onDelete : Note -> msg
+    }
+    -> ( String, Html msg )
+noteView { note, onInput, onDelete } =
     let
         noteId : String
         noteId =
@@ -204,6 +222,7 @@ noteView { note, onInput } =
     , AutoTextarea.autoTextarea
         { value = content
         , onInput = onInput noteId
+        , onDelete = onDelete note
         , placeholder = ""
         }
     )
