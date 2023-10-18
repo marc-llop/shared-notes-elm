@@ -14,7 +14,7 @@ import Html.Styled.Keyed as Keyed
 import Http
 import Icons
 import Identifiers exposing (NotebookId)
-import Note exposing (ClientOnlyNote, Note(..), StoredNote, noteIdString, noteToPair, noteView)
+import Note exposing (Note, noteIdString, noteToPair, noteView)
 import Notebook exposing (insertNotebook)
 import Random
 import Spinner exposing (spinner)
@@ -39,9 +39,9 @@ type alias Model =
     }
 
 
-dictFromNotes : List StoredNote -> Notes
+dictFromNotes : List Note -> Notes
 dictFromNotes noteList =
-    List.map Stored noteList
+    noteList
         |> List.map noteToPair
         |> Dict.fromList
 
@@ -100,12 +100,12 @@ main =
 type Msg
     = WordsFetched (Result Http.Error ( String, String ))
     | NotebookFound (Result Http.Error NotebookId)
-    | NotebookFetched NotebookId (Result Http.Error ( List StoredNote, Random.Seed ))
+    | NotebookFetched NotebookId (Result Http.Error ( List Note, Random.Seed ))
     | NotebookStored (Result Http.Error NotebookId)
     | WriteNote String String
     | AddNote
-    | NoteStored (Result Http.Error StoredNote)
-    | NoteUpdated StoredNote (Result Http.Error ( StoredNote, Random.Seed ))
+    | NoteStored (Result Http.Error Note)
+    | NoteUpdated Note (Result Http.Error ( Note, Random.Seed ))
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -205,21 +205,14 @@ updateOpenNotebook msg model notebookId notes =
                 Nothing ->
                     Cmd.none
 
-                Just (ClientOnly note) ->
-                    Cmd.none
-
-                Just (Stored note) ->
+                Just note ->
                     Note.patchNote model.randomSeed (NoteUpdated note) notebookId note
             )
 
         AddNote ->
             let
-                ( note, newSeed ) =
+                ( newNote, newSeed ) =
                     Note.newNote model.randomSeed
-
-                newNote : Note
-                newNote =
-                    ClientOnly note
 
                 noteId : String
                 noteId =
@@ -230,7 +223,7 @@ updateOpenNotebook msg model notebookId notes =
                     NotebookOpen notebookId (Dict.insert noteId newNote notes)
             in
             ( { randomSeed = newSeed, app = newApp }
-            , Note.insertNewNote note NoteStored notebookId
+            , Note.insertNewNote newNote NoteStored notebookId
             )
 
         NoteStored result ->
@@ -292,13 +285,9 @@ generateNotebookIdWithoutWords seed =
     generateNotebookIdFromWords ( a, b ) seed2
 
 
-updateNoteToStored : StoredNote -> Dict String Note -> Dict String Note
-updateNoteToStored storedNote notes =
+updateNoteToStored : Note -> Dict String Note -> Dict String Note
+updateNoteToStored note notes =
     let
-        note : Note
-        note =
-            Stored storedNote
-
         updateNote : Maybe Note -> Maybe Note
         updateNote =
             Maybe.map (\_ -> note)

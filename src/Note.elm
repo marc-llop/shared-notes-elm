@@ -1,7 +1,5 @@
 module Note exposing
-    ( ClientOnlyNote
-    , Note(..)
-    , StoredNote
+    ( Note
     , exampleNotes
     , insertNewNote
     , insertNotes
@@ -26,16 +24,8 @@ import Task exposing (Task)
 
 
 type Note
-    = ClientOnly ClientOnlyNote
-    | Stored StoredNote
-
-
-type ClientOnlyNote
-    = ClientOnlyNote ClientId String
-
-
-type StoredNote
-    = StoredNote ServerId ClientId String
+    = ClientOnly ClientId String
+    | Stored ServerId ClientId String
 
 
 type alias ClientId =
@@ -49,10 +39,10 @@ type alias ServerId =
 noteIdString : Note -> String
 noteIdString note =
     case note of
-        ClientOnly (ClientOnlyNote clientId _) ->
+        ClientOnly clientId _ ->
             clientId
 
-        Stored (StoredNote _ clientId _) ->
+        Stored _ clientId _ ->
             clientId
 
 
@@ -62,12 +52,12 @@ newClientId seed =
         |> Tuple.mapFirst (\noteId -> "clientId-" ++ noteId)
 
 
-newNote : Seed -> ( ClientOnlyNote, Seed )
+newNote : Seed -> ( Note, Seed )
 newNote seed =
     let
-        newNoteWithId : ClientId -> ClientOnlyNote
+        newNoteWithId : ClientId -> Note
         newNoteWithId noteId =
-            ClientOnlyNote noteId ""
+            ClientOnly noteId ""
     in
     newClientId seed
         |> Tuple.mapFirst newNoteWithId
@@ -76,48 +66,33 @@ newNote seed =
 updateNoteText : String -> Note -> Note
 updateNoteText str note =
     case note of
-        ClientOnly (ClientOnlyNote id _) ->
-            ClientOnly (ClientOnlyNote id str)
+        ClientOnly id _ ->
+            ClientOnly id str
 
-        Stored (StoredNote serverId clientId _) ->
-            Stored (StoredNote serverId clientId str)
-
-
-encodeClientNote : NotebookId -> ClientOnlyNote -> Value
-encodeClientNote notebookId (ClientOnlyNote _ content) =
-    Encode.object
-        [ ( "content", Encode.string content )
-        , ( "notebook_id", Encode.string (notebookIdToString notebookId) )
-        ]
-
-
-encodeStoredNote : NotebookId -> StoredNote -> Value
-encodeStoredNote notebookId (StoredNote serverId clientId content) =
-    Encode.object
-        [ ( "id", Encode.int serverId )
-        , ( "content", Encode.string content )
-        , ( "notebook_id", Encode.string (notebookIdToString notebookId) )
-        ]
+        Stored serverId clientId _ ->
+            Stored serverId clientId str
 
 
 encodeNote : NotebookId -> Note -> Value
 encodeNote notebookId note =
     case note of
-        ClientOnly n ->
-            encodeClientNote notebookId n
+        ClientOnly _ content ->
+            Encode.object
+                [ ( "content", Encode.string content )
+                , ( "notebook_id", Encode.string (notebookIdToString notebookId) )
+                ]
 
-        Stored n ->
-            encodeStoredNote notebookId n
+        Stored serverId _ content ->
+            Encode.object
+                [ ( "id", Encode.int serverId )
+                , ( "content", Encode.string content )
+                , ( "notebook_id", Encode.string (notebookIdToString notebookId) )
+                ]
 
 
 encodeNoteList : NotebookId -> List Note -> Value
 encodeNoteList notebookId notes =
     Encode.list (encodeNote notebookId) notes
-
-
-encodeClientNoteList : NotebookId -> List ClientOnlyNote -> Value
-encodeClientNoteList notebookId notes =
-    Encode.list (encodeClientNote notebookId) notes
 
 
 noteDecoder : Decoder ( ServerId, String )
@@ -133,7 +108,7 @@ notesDecoder =
     Decode.list noteDecoder
 
 
-storedNotesDecoder : Seed -> Decoder ( List StoredNote, Seed )
+storedNotesDecoder : Seed -> Decoder ( List Note, Seed )
 storedNotesDecoder seed =
     notesDecoder
         |> Decode.map (initializeIds seed)
@@ -149,39 +124,49 @@ notesEndpoint =
     "notes"
 
 
-noteEndpoint : NotebookId -> StoredNote -> String
-noteEndpoint notebookId (StoredNote serverId _ content) =
+noteEndpoint : NotebookId -> ServerId -> String
+noteEndpoint notebookId serverId =
     notesEndpoint ++ "?id=eq." ++ String.fromInt serverId ++ "&notebook_id=eq." ++ notebookIdToString notebookId
 
 
-insertNotes : Seed -> (Result Http.Error ( List StoredNote, Seed ) -> msg) -> NotebookId -> List ClientOnlyNote -> Cmd msg
+insertNotes : Seed -> (Result Http.Error ( List Note, Seed ) -> msg) -> NotebookId -> List Note -> Cmd msg
 insertNotes seed toMsg notebookId notes =
     postSupabase
         { path = notesEndpoint
-        , body = encodeClientNoteList notebookId notes
+        , body = encodeNoteList notebookId notes
         , decoder = storedNotesDecoder seed
         , toMsg = toMsg
         }
 
 
-insertNewNote : ClientOnlyNote -> (Result Http.Error StoredNote -> msg) -> NotebookId -> Cmd msg
+insertNewNote : Note -> (Result Http.Error Note -> msg) -> NotebookId -> Cmd msg
 insertNewNote oldNote toMsg notebookId =
-    postSupabase
-        { path = notesEndpoint
-        , body = encodeClientNote notebookId oldNote
-        , decoder = Decode.map (storedNoteFromClientNote oldNote) firstNoteDecoder
-        , toMsg = toMsg
-        }
+    case oldNote of
+        Stored _ _ _ ->
+            Cmd.none
+
+        ClientOnly clientId _ ->
+            postSupabase
+                { path = notesEndpoint
+                , body = encodeNote notebookId oldNote
+                , decoder = Decode.map (storedNoteFromClientNote clientId) firstNoteDecoder
+                , toMsg = toMsg
+                }
 
 
-patchNote : Seed -> (Result Http.Error ( StoredNote, Seed ) -> msg) -> NotebookId -> StoredNote -> Cmd msg
+patchNote : Seed -> (Result Http.Error ( Note, Seed ) -> msg) -> NotebookId -> Note -> Cmd msg
 patchNote seed toMsg notebookId note =
-    patchSupabase
-        { path = noteEndpoint notebookId note
-        , body = encodeStoredNote notebookId note
-        , decoder = Decode.map (newStoredNote seed) firstNoteDecoder
-        , toMsg = toMsg
-        }
+    case note of
+        ClientOnly _ _ ->
+            Cmd.none
+
+        Stored serverId _ _ ->
+            patchSupabase
+                { path = noteEndpoint notebookId serverId
+                , body = encodeNote notebookId note
+                , decoder = Decode.map (newStoredNote seed) firstNoteDecoder
+                , toMsg = toMsg
+                }
 
 
 noteToPair : Note -> ( String, Note )
@@ -199,10 +184,10 @@ noteView { note, onInput } =
         content : String
         content =
             case note of
-                ClientOnly (ClientOnlyNote _ c) ->
+                ClientOnly _ c ->
                     c
 
-                Stored (StoredNote _ _ c) ->
+                Stored _ _ c ->
                     c
     in
     ( noteId
@@ -216,29 +201,28 @@ noteView { note, onInput } =
 
 exampleNotes : List Note
 exampleNotes =
-    [ ClientOnlyNote "clientId-1" "Store model in localStorage as well so it can be started offline."
-    , ClientOnlyNote "clientId-2" "Merge a notebook's notes in a non-destructive way whenever a content conflict is detected after downloading a note."
-    , ClientOnlyNote "clientId-3" "Make notes automatically synchronized by using supabase client's real-time API on a JS port."
-    , ClientOnlyNote "clientId-4" "Make note deletion undoable."
-    , ClientOnlyNote "clientId-5" "Debounce database updates."
-    , ClientOnlyNote "clientId-6" "Regenerate notebook ID upon primary key constraint violation on insert."
+    [ ClientOnly "clientId-1" "Store model in localStorage as well so it can be started offline."
+    , ClientOnly "clientId-2" "Merge a notebook's notes in a non-destructive way whenever a content conflict is detected after downloading a note."
+    , ClientOnly "clientId-3" "Make notes automatically synchronized by using supabase client's real-time API on a JS port."
+    , ClientOnly "clientId-4" "Make note deletion undoable."
+    , ClientOnly "clientId-5" "Debounce database updates."
+    , ClientOnly "clientId-6" "Regenerate notebook ID upon primary key constraint violation on insert."
     ]
-        |> List.map ClientOnly
 
 
-newStoredNote : Seed -> ( ServerId, String ) -> ( StoredNote, Seed )
+newStoredNote : Seed -> ( ServerId, String ) -> ( Note, Seed )
 newStoredNote seed ( serverId, content ) =
     newClientId seed
         |> Tuple.mapFirst
-            (\clientId -> StoredNote serverId clientId content)
+            (\clientId -> Stored serverId clientId content)
 
 
-storedNoteFromClientNote : ClientOnlyNote -> ( ServerId, String ) -> StoredNote
-storedNoteFromClientNote (ClientOnlyNote clientId _) ( serverId, content ) =
-    StoredNote serverId clientId content
+storedNoteFromClientNote : ClientId -> ( ServerId, String ) -> Note
+storedNoteFromClientNote clientId ( serverId, content ) =
+    Stored serverId clientId content
 
 
-initializeIds : Seed -> List ( ServerId, String ) -> ( List StoredNote, Seed )
+initializeIds : Seed -> List ( ServerId, String ) -> ( List Note, Seed )
 initializeIds seed list =
     case list of
         [] ->
