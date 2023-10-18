@@ -10,6 +10,7 @@ module Note exposing
     , patchNote
     , storedNotesDecoder
     , updateNoteText
+    , noteOrder
     )
 
 import AutoTextarea
@@ -173,6 +174,15 @@ noteToPair : Note -> ( String, Note )
 noteToPair note =
     ( noteIdString note, note )
 
+{-| Returns an integer that tells the position this
+note should appear in the list, so as to preserve the
+creation order of stored notes.
+-}
+noteOrder : Note -> Int
+noteOrder note =
+    case note of
+        Stored serverId _ _ -> serverId
+        ClientOnly _ _ -> 0
 
 noteView : { note : Note, onInput : String -> String -> msg } -> ( String, Html msg )
 noteView { note, onInput } =

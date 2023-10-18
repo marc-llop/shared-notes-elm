@@ -317,8 +317,9 @@ openNotebook notebookId notes =
         notesList : List ( String, Html Msg )
         notesList =
             Dict.toList notes
-                |> List.sortBy (Tuple.first >> String.toInt >> Maybe.withDefault 0)
-                |> List.map (\( _, note ) -> noteView { note = note, onInput = WriteNote })
+                |> List.map Tuple.second
+                |> List.sortBy Note.noteOrder
+                |> List.map (\note -> noteView { note = note, onInput = WriteNote })
     in
     div [ class "notebook" ]
         [ span [] [ text <| Identifiers.notebookIdToString notebookId ]
