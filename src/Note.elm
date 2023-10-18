@@ -199,7 +199,7 @@ noteOrder note =
 
 noteView : 
     { note : Note
-    , onInput : String -> String -> msg
+    , onInput : Note -> String -> msg
     , onDelete : Note -> msg
     }
     -> ( String, Html msg )
@@ -221,7 +221,7 @@ noteView { note, onInput, onDelete } =
     ( noteId
     , AutoTextarea.autoTextarea
         { value = content
-        , onInput = onInput noteId
+        , onInput = onInput note
         , onDelete = onDelete note
         , placeholder = ""
         }

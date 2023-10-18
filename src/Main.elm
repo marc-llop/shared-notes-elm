@@ -101,7 +101,7 @@ type Msg
     | NotebookFound (Result Http.Error NotebookId)
     | NotebookFetched NotebookId (Result Http.Error ( List Note, Random.Seed ))
     | NotebookStored (Result Http.Error NotebookId)
-    | WriteNote String String
+    | WriteNote Note String
     | AddNote
     | NoteStored (Result Http.Error Note)
     | NoteUpdated Note (Result Http.Error ( Note, Random.Seed ))
@@ -192,28 +192,24 @@ updateOpenNotebook msg model notebookId notes =
         NotebookStored _ ->
             ( model, Cmd.none )
 
-        WriteNote noteId value ->
+        WriteNote note value ->
             let
-                maybeNewNote : Maybe Note
-                maybeNewNote =
-                    Dict.get noteId notes
-                        |> Maybe.map (Note.updateNoteText value)
+                noteId : String
+                noteId = Note.noteIdString note
+
+                newNote : Note
+                newNote = Note.updateNoteText value note
 
                 updateInDict : Maybe Note -> Maybe Note
                 updateInDict =
-                    Maybe.andThen (\_ -> maybeNewNote)
+                    Maybe.andThen (\_ -> Just newNote)
             in
             ( { model
                 | app =
                     NotebookOpen notebookId
                         (Dict.update noteId updateInDict notes)
               }
-            , case maybeNewNote of
-                Nothing ->
-                    Cmd.none
-
-                Just note ->
-                    Note.patchNote model.randomSeed (NoteUpdated note) notebookId note
+            , Note.patchNote model.randomSeed (NoteUpdated newNote) notebookId newNote
             )
 
         AddNote ->
