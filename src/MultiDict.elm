@@ -1,8 +1,6 @@
 module MultiDict exposing (MultiDict, diff, fromList, insert, intersectWith, toList)
 
-import Array exposing (set)
 import Dict exposing (Dict)
-import Json.Decode exposing (dict)
 import Set exposing (Set)
 
 

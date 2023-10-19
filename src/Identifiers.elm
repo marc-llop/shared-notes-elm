@@ -2,7 +2,7 @@ module Identifiers exposing (NotebookId, fetchTwoWords, notebookIdFromWords, not
 
 import Http
 import Json.Decode as Decode exposing (Decoder)
-import Random exposing (Generator, Seed)
+import Random exposing (Generator)
 import Random.Char
 import Random.Extra
 import Random.String

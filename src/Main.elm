@@ -1,14 +1,10 @@
-port module Main exposing (Flags, Model, Msg, main)
+port module Main exposing (Flags, Model, Msg, App, main)
 
--- import VitePluginHelper
-
-import AutoTextarea exposing (autoTextarea)
 import Browser
 import ButtonView exposing (buttonLinkView, buttonView)
 import Css
 import Dict exposing (Dict)
-import Html
-import Html.Styled exposing (Html, b, div, h1, p, span, text, toUnstyled)
+import Html.Styled exposing (Html, b, div, h1, p, span, text)
 import Html.Styled.Attributes as Attributes exposing (class)
 import Html.Styled.Keyed as Keyed
 import Http
@@ -18,7 +14,6 @@ import Note exposing (Note, noteIdString, noteToPair, noteView)
 import Notebook exposing (insertNotebook)
 import Random
 import Spinner exposing (spinner)
-import Task
 
 
 port updateLocation : String -> Cmd msg
@@ -202,7 +197,7 @@ updateOpenNotebook msg model notebookId notes =
 
                 updateInDict : Maybe Note -> Maybe Note
                 updateInDict =
-                    Maybe.andThen (\_ -> Just newNote)
+                    Maybe.map (\_ -> newNote)
             in
             ( { model
                 | app =
@@ -284,6 +279,7 @@ generateNotebookIdFromWords ( a, b ) seed =
         ( c, newSeed ) =
             Random.step Identifiers.wordGenerator seed
 
+        notebookId : NotebookId
         notebookId =
             Identifiers.notebookIdFromWords a b c
     in

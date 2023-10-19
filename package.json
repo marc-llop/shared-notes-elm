@@ -10,7 +10,7 @@
     "prebuild": "elm-tooling install",
     "build": "vite build",
     "serve": "vite preview",
-    "lint": "elm-review",
+    "lint": "elm-review --ignore-dirs tests",
     "test": "elm-test-rs"
   },
   "devDependencies": {

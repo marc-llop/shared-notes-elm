@@ -1,6 +1,5 @@
 module Note exposing
     ( Note
-    , exampleNotes
     , insertNewNote
     , insertNotes
     , newNote
@@ -21,9 +20,7 @@ import Identifiers exposing (NotebookId, notebookIdToString, wordGenerator)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
 import Random exposing (Seed)
-import Supabase exposing (getSupabase, patchSupabase, postSupabase, deleteSupabase, singletonDecoder, upsertSupabase)
-import Task exposing (Task)
-import Supabase exposing (deleteSupabase)
+import Supabase exposing (patchSupabase, postSupabase, deleteSupabase, singletonDecoder)
 
 
 type Note
@@ -227,7 +224,7 @@ noteView { note, onInput, onDelete } =
         }
     )
 
-
+{-
 exampleNotes : List Note
 exampleNotes =
     [ ClientOnly "clientId-1" "Store model in localStorage as well so it can be started offline."
@@ -237,7 +234,7 @@ exampleNotes =
     , ClientOnly "clientId-5" "Debounce database updates."
     , ClientOnly "clientId-6" "Regenerate notebook ID upon primary key constraint violation on insert."
     ]
-
+-}
 
 newStoredNote : Seed -> ( ServerId, String ) -> ( Note, Seed )
 newStoredNote seed ( serverId, content ) =

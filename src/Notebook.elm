@@ -7,8 +7,6 @@ import Json.Encode as Encode exposing (Value)
 import Note exposing (Note, storedNotesDecoder)
 import Random exposing (Seed)
 import Supabase exposing (getSupabase, postSupabase, singletonDecoder)
-import Task exposing (Task)
-
 
 endpoint : String
 endpoint =
