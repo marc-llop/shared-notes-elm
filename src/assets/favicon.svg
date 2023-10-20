@@ -1,0 +1,69 @@
+<svg
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+  class="feather feather-file-text"
+  xmlns="http://www.w3.org/2000/svg"
+  xmlns:xlink="http://www.w3.org/1999/xlink"
+>
+  <defs>
+    <linearGradient id="gradient-2">
+      <stop offset="0" style="stop-color: rgb(5, 0, 16);" />
+      <stop offset="1" style="stop-color: rgb(48, 19, 0);" />
+    </linearGradient>
+    <linearGradient id="gradient-0">
+      <stop offset="0" style="stop-color: rgb(33, 0, 140);" />
+      <stop offset="1" style="stop-color: rgb(231, 123, 0);" />
+    </linearGradient>
+    <linearGradient id="gradient-1">
+      <stop style="stop-color: rgb(33, 0, 140);" offset="0" />
+      <stop style="stop-color: rgb(110, 2, 70);" offset="1" />
+    </linearGradient>
+    <linearGradient
+      id="gradient-0-1"
+      gradientUnits="userSpaceOnUse"
+      x1="12"
+      y1="2"
+      x2="12"
+      y2="22"
+      xlink:href="#gradient-0"
+    />
+    <linearGradient
+      id="gradient-1-0"
+      gradientUnits="userSpaceOnUse"
+      x1="17"
+      y1="2"
+      x2="17"
+      y2="8"
+      xlink:href="#gradient-1"
+    />
+  </defs>
+  <path
+    d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+    style="fill-rule: evenodd; paint-order: fill; stroke: url(#gradient-0-1);"
+  />
+  <polyline
+    points="14 2 14 8 20 8"
+    style="fill-rule: evenodd; paint-order: fill; stroke: url(#gradient-1-0);"
+  />
+  <line
+    x1="16"
+    y1="13"
+    x2="8"
+    y2="13"
+    style="stroke: rgba(166, 38, 15, 0.85);"
+  />
+  <line
+    x1="16"
+    y1="17"
+    x2="8"
+    y2="17"
+    style="stroke: rgba(223, 104, 0, 0.85);"
+  />
+  <polyline points="10 9 9 9 8 9" style="stroke: rgba(107, 22, 56, 0.85);" />
+</svg>
