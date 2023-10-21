@@ -15,6 +15,7 @@ marginForButtons =
 autoExpandStyles : List Style
 autoExpandStyles =
     [ position relative
+    , boxSizing contentBox
     , width (pct 100)
     , borderRadius (px 2)
     , margin2 (px 2) zero
