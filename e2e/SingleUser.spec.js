@@ -1,30 +1,36 @@
 const { test, expect } = require('@playwright/test')
+const { MainPage } = require('./MainPage')
 
 test('has title', async ({ page }) => {
-    await page.goto('/')
+    const mainPage = new MainPage(page)
+    await mainPage.goTo()
     await expect(page).toHaveTitle('Elm Shared Notes')
-    await expect(page.getByRole('heading')).toHaveText('Elm Shared Notes')
+    await expect(mainPage.title).toHaveText('Elm Shared Notes')
 })
 
 test('links to github', async ({ page }) => {
-    await page.goto('/')
-    await expect(page.getByRole('link', { title: 'GitHub' })).toHaveAttribute(
+    const mainPage = new MainPage(page)
+    await mainPage.goTo()
+    await expect(mainPage.githubLink).toHaveAttribute(
         'href',
         'https://github.com/marc-llop/shared-notes-elm',
     )
 })
 
 test('adds, edits, and preserves a note', async ({ page }) => {
-    await page.goto('/')
-    await expect(page.getByRole('textbox')).not.toBeAttached()
-    await expect(page.getByTitle('Add Note')).toBeVisible()
+    const mainPage = new MainPage(page)
+    await mainPage.goTo()
+    await expect(mainPage.notes).not.toBeAttached()
+    await expect(mainPage.addNoteButton).toBeVisible()
 
-    await page.getByTitle('Add Note').click()
-    await expect(page.getByRole('textbox')).toHaveCount(1)
+    await mainPage.addNoteButton.click()
+    await expect(mainPage.notes).toHaveCount(1)
     const noteContent = 'Test note 1'
-    await page.getByRole('textbox').fill(noteContent)
+    await mainPage.notes.fill(noteContent)
+    await expect(mainPage.notes).toHaveValue(noteContent)
 
     await page.reload()
-    await expect(page.getByRole('textbox')).toHaveCount(1)
-    await expect(page.getByRole('textbox')).toHaveValue(noteContent)
+    await expect(mainPage.notes).toHaveCount(1)
+    await expect(mainPage.notes).toHaveValue(noteContent)
+    await expect(mainPage.getNoteWithContent(noteContent)).toBeVisible()
 })
