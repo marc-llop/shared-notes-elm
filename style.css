@@ -66,6 +66,13 @@ body {
   }
 }
 
+.notebookId {
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  justify-content: center;
+}
+
 .notebook {
   width: 100%;
 }

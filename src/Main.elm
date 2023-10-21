@@ -14,6 +14,7 @@ import Note exposing (Note, noteIdString, noteToPair, noteView)
 import Notebook exposing (insertNotebook)
 import Random
 import Spinner exposing (spinner)
+import ClipboardButton exposing (ClipboardState, ClipboardMsg)
 
 
 port updateLocation : String -> Cmd msg
@@ -26,10 +27,10 @@ type App
     = OpeningNotebook
     | NotebookOpen NotebookId Notes
 
-
 type alias Model =
     { randomSeed : Random.Seed
     , app : App
+    , clipboardState : ClipboardState
     }
 
 
@@ -76,6 +77,7 @@ init { path, randomSeed } =
     in
     ( { randomSeed = Random.initialSeed randomSeed
       , app = Tuple.first newApp
+      , clipboardState = ClipboardButton.initClipboardState
       }
     , Tuple.second newApp
     )
@@ -96,6 +98,7 @@ type Msg
     | NotebookFound (Result Http.Error NotebookId)
     | NotebookFetched NotebookId (Result Http.Error ( List Note, Random.Seed ))
     | NotebookStored (Result Http.Error NotebookId)
+    | ClipboardMsgContainer ClipboardMsg
     | WriteNote Note String
     | AddNote
     | NoteStored (Result Http.Error Note)
@@ -153,6 +156,9 @@ updateOpeningNotebook msg model =
         NotebookStored _ ->
             ( model, Cmd.none )
 
+        ClipboardMsgContainer _ ->
+            ( model, Cmd.none )
+
         WriteNote _ _ ->
             ( model, Cmd.none )
 
@@ -187,6 +193,14 @@ updateOpenNotebook msg model notebookId notes =
         NotebookStored _ ->
             ( model, Cmd.none )
 
+        ClipboardMsgContainer clipboardMsg ->
+            let
+                (newClipboardState, clipboardCmd) = ClipboardButton.updateClipboardState notebookId clipboardMsg model.clipboardState
+            in
+                ( { model | clipboardState = newClipboardState }
+                , Cmd.map ClipboardMsgContainer clipboardCmd
+                )
+
         WriteNote note value ->
             let
                 noteId : String
@@ -220,7 +234,7 @@ updateOpenNotebook msg model notebookId notes =
                 newApp =
                     NotebookOpen notebookId (Dict.insert noteId newNote notes)
             in
-            ( { randomSeed = newSeed, app = newApp }
+            ( { model | randomSeed = newSeed, app = newApp }
             , Note.insertNewNote newNote NoteStored notebookId
             )
 
@@ -265,6 +279,7 @@ openNewNotebookInModel : Random.Seed -> NotebookId -> ( Model, Cmd Msg )
 openNewNotebookInModel newSeed notebookId =
     ( { randomSeed = newSeed
       , app = NotebookOpen notebookId Dict.empty
+      , clipboardState = ClipboardButton.initClipboardState
       }
     , Cmd.batch
         [ updateLocation (Identifiers.notebookIdToString notebookId)
@@ -323,9 +338,20 @@ buttonRow =
             }
         ]
 
+notebookIdView : NotebookId -> ClipboardState -> Html Msg
+notebookIdView notebookId state =
+    let
+        idString : String
+        idString = Identifiers.notebookIdToString notebookId
+    in
+        div [ class "notebookId" ]
+            [ span [] [ text idString ]
+            , ClipboardButton.clipboardButtonView state
+                |> Html.Styled.map ClipboardMsgContainer
+            ]
 
-openNotebook : NotebookId -> Notes -> Html Msg
-openNotebook notebookId notes =
+openNotebook : NotebookId -> Notes -> ClipboardState -> Html Msg
+openNotebook notebookId notes clipboardState =
     let
         notesList : List ( String, Html Msg )
         notesList =
@@ -339,7 +365,7 @@ openNotebook notebookId notes =
                     })
     in
     div [ class "notebook" ]
-        [ span [] [ text <| Identifiers.notebookIdToString notebookId ]
+        [ notebookIdView notebookId clipboardState
         , p [] [ b [] [ text "Warning: " ], text "All notebooks are PUBLIC." ]
         , p [] [ text "Be mindful of what you write here. Never write any personal information, passwords, or any information you want to protect." ]
         , buttonRow
@@ -358,7 +384,7 @@ view model =
                     spinner
 
                 NotebookOpen notebookId notes ->
-                    openNotebook notebookId notes
+                    openNotebook notebookId notes model.clipboardState
     in
     div [ class "screen" ]
         [ div [ class "notebookScreen" ]

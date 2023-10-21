@@ -3,13 +3,14 @@ module Icons exposing
     , iconButtonStyles
     , plus
     , trash2
+    , copy
     )
 
 import Css exposing (..)
 import Html.Styled exposing (Html)
 import Html.Styled.Attributes
 import Svg.Styled exposing (Svg, svg)
-import Svg.Styled.Attributes as Attr exposing (d, points, x1, x2, y1, y2)
+import Svg.Styled.Attributes as Attr exposing (d, points, x1, x2, y1, y2, x, y, rx, ry)
 
 
 iconButtonStyles : List Style
@@ -69,4 +70,12 @@ trash2 =
         , Svg.Styled.path [ d "M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" ] []
         , Svg.Styled.line [ x1 "10", y1 "11", x2 "10", y2 "17" ] []
         , Svg.Styled.line [ x1 "14", y1 "11", x2 "14", y2 "17" ] []
+        ]
+
+copy : List Style -> Html msg
+copy styles =
+    svgFeatherIcon "copy"
+        styles
+        [ Svg.Styled.rect [ x "9", y "9", Attr.width "13", Attr.height "13", rx "2", ry "2" ] []
+        , Svg.Styled.path [ d "M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" ] []
         ]
