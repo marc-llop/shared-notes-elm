@@ -40,6 +40,7 @@ textareaStyles : List Style
 textareaStyles =
     divStyles
         ++ [ position absolute
+           , height (pct 100)
            , top zero
            , bottom zero
            , left zero
