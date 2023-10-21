@@ -1,6 +1,10 @@
 const { test, expect } = require('@playwright/test')
 const { MainPage } = require('./MainPage')
 
+async function waitForRequest() {
+    return new Promise(resolve => setTimeout(resolve, 200))
+}
+
 test('has title', async ({ page }) => {
     const mainPage = new MainPage(page)
     await mainPage.goTo()
@@ -28,6 +32,7 @@ test('adds, edits, and preserves a note', async ({ page }) => {
     const noteContent = 'Test note 1'
     await mainPage.notes.fill(noteContent)
     await expect(mainPage.notes).toHaveValue(noteContent)
+    await waitForRequest()
 
     await page.reload()
     await expect(mainPage.notes).toHaveCount(1)
