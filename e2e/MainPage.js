@@ -25,7 +25,11 @@ exports.MainPage = class MainPage {
     }
 
     getNoteWithContent(content) {
-        return this.notes.filter({ hasText: content })
+        return this.notes.filter({ hasText: new RegExp(content) })
+    }
+
+    getNoteTextarea(note) {
+        return note.getByRole('textbox')
     }
 
     getNoteDeleteButton(note) {

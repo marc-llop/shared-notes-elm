@@ -30,13 +30,14 @@ test('adds, edits, stores and deletes a note', async ({ page }) => {
     await mainPage.addNoteButton.click()
     await expect(mainPage.notes).toHaveCount(1)
     const noteContent = 'Test note 1'
-    await mainPage.notes.getByRole('textbox').fill(noteContent)
-    await expect(mainPage.notes.getByRole('textbox')).toHaveValue(noteContent)
+    const noteTextarea = mainPage.getNoteTextarea(mainPage.notes.first())
+    await noteTextarea.fill(noteContent)
+    await expect(noteTextarea).toHaveValue(noteContent)
 
     await waitForRequest()
     await page.reload()
     await expect(mainPage.notes).toHaveCount(1)
-    await expect(mainPage.notes.getByRole('textbox')).toHaveValue(noteContent)
+    await expect(noteTextarea).toHaveValue(noteContent)
     const newNote = mainPage.getNoteWithContent(noteContent)
     await expect(newNote).toBeVisible()
 
