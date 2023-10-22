@@ -48,7 +48,13 @@ test('allows room sharing by URL and copying ID to clipboard', async ({
 
     const clipboardStart = await page.evaluate('navigator.clipboard.readText()')
     expect(clipboardStart).toEqual('')
+    await expect(mainPage.clipboardMessage).not.toBeVisible()
     await mainPage.clipboardButton.click()
+
+    await expect(mainPage.clipboardMessage).toBeVisible()
     const clipboardEnd = await page.evaluate('navigator.clipboard.readText()')
     expect(clipboardEnd).toEqual(mainPage.testNotebookId)
+
+    await mainPage.clipboardButton.blur()
+    await expect(mainPage.clipboardMessage).not.toBeVisible()
 })
