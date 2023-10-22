@@ -2,7 +2,7 @@ const { test, expect } = require('@playwright/test')
 const { MainPage } = require('./MainPage')
 
 async function waitForRequest() {
-    return new Promise(resolve => setTimeout(resolve, 200))
+    return new Promise(resolve => setTimeout(resolve, 400))
 }
 
 test('has title', async ({ page }) => {
@@ -21,7 +21,7 @@ test('links to github', async ({ page }) => {
     )
 })
 
-test('adds, edits, and preserves a note', async ({ page }) => {
+test('adds, edits, stores and deletes a note', async ({ page }) => {
     const mainPage = new MainPage(page)
     await mainPage.goTo()
     await expect(mainPage.notes).not.toBeAttached()
@@ -30,14 +30,26 @@ test('adds, edits, and preserves a note', async ({ page }) => {
     await mainPage.addNoteButton.click()
     await expect(mainPage.notes).toHaveCount(1)
     const noteContent = 'Test note 1'
-    await mainPage.notes.fill(noteContent)
-    await expect(mainPage.notes).toHaveValue(noteContent)
-    await waitForRequest()
+    await mainPage.notes.getByRole('textbox').fill(noteContent)
+    await expect(mainPage.notes.getByRole('textbox')).toHaveValue(noteContent)
 
+    await waitForRequest()
     await page.reload()
     await expect(mainPage.notes).toHaveCount(1)
-    await expect(mainPage.notes).toHaveValue(noteContent)
-    await expect(mainPage.getNoteWithContent(noteContent)).toBeVisible()
+    await expect(mainPage.notes.getByRole('textbox')).toHaveValue(noteContent)
+    const newNote = mainPage.getNoteWithContent(noteContent)
+    await expect(newNote).toBeVisible()
+
+    await newNote.click({ force: true })
+    const deleteButton = mainPage.getNoteDeleteButton(newNote)
+    await expect(deleteButton).toBeVisible()
+    await deleteButton.click()
+    await expect(mainPage.notes).toHaveCount(0)
+
+    await waitForRequest()
+    await page.reload()
+    await waitForRequest()
+    await expect(mainPage.notes).toHaveCount(0)
 })
 
 test('allows room sharing by URL and copying ID to clipboard', async ({

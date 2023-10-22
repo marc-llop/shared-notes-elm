@@ -11,7 +11,7 @@ exports.MainPage = class MainPage {
         this.clipboardButton = page.getByTitle('Copy to clipboard')
         this.clipboardMessage = page.getByText('Copied!')
         this.githubLink = page.getByRole('link', { title: 'GitHub' })
-        this.notes = page.getByRole('textbox')
+        this.notes = page.getByTestId('note')
         this.addNoteButton = page.getByTitle('Add Note')
     }
 
@@ -26,5 +26,9 @@ exports.MainPage = class MainPage {
 
     getNoteWithContent(content) {
         return this.notes.filter({ hasText: content })
+    }
+
+    getNoteDeleteButton(note) {
+        return note.getByTitle('Delete note')
     }
 }

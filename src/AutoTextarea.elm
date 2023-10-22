@@ -86,7 +86,7 @@ autoTextarea :
     }
     -> Html msg
 autoTextarea { value, onInput, onDelete, placeholder } =
-    div [ css autoExpandStyles ]
+    div [ css autoExpandStyles, Attributes.attribute "data-testid" "note" ]
         [ textarea
             [ css textareaStyles
             , Events.onInput onInput
