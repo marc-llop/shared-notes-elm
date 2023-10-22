@@ -1,9 +1,14 @@
+const { expect } = require('@playwright/test')
+
 exports.MainPage = class MainPage {
     constructor(page) {
         this.page = page
 
+        this.testNotebookId = 'tests-tests-tests'
+
         /* LOCATORS */
         this.title = page.getByRole('heading')
+        this.clipboardButton = page.getByTitle('Copy to clipboard')
         this.githubLink = page.getByRole('link', { title: 'GitHub' })
         this.notes = page.getByRole('textbox')
         this.addNoteButton = page.getByTitle('Add Note')
@@ -11,6 +16,11 @@ exports.MainPage = class MainPage {
 
     async goTo() {
         await this.page.goto('/')
+    }
+
+    async goToNotebook(notebookId) {
+        await this.page.goto(notebookId)
+        await expect(this.page).toHaveURL(notebookId)
     }
 
     getNoteWithContent(content) {

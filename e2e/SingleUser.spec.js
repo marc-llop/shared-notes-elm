@@ -39,3 +39,16 @@ test('adds, edits, and preserves a note', async ({ page }) => {
     await expect(mainPage.notes).toHaveValue(noteContent)
     await expect(mainPage.getNoteWithContent(noteContent)).toBeVisible()
 })
+
+test('allows room sharing by URL and copying ID to clipboard', async ({
+    page,
+}) => {
+    const mainPage = new MainPage(page)
+    await mainPage.goToNotebook(mainPage.testNotebookId)
+
+    const clipboardStart = await page.evaluate('navigator.clipboard.readText()')
+    expect(clipboardStart).toEqual('')
+    await mainPage.clipboardButton.click()
+    const clipboardEnd = await page.evaluate('navigator.clipboard.readText()')
+    expect(clipboardEnd).toEqual(mainPage.testNotebookId)
+})
