@@ -1,4 +1,4 @@
-module ButtonView exposing (buttonLinkView, buttonView)
+module ButtonView exposing (linkButtonView, buttonView)
 
 import Css exposing (..)
 import Html.Styled exposing (Html, a, button, div)
@@ -11,6 +11,7 @@ divStyles : List Style
 divStyles =
     [ displayFlex
     , width (pct 100)
+    , marginBottom (px 30)
     , justifyContent center
     ]
 
@@ -23,7 +24,6 @@ buttonStyles =
            , height (px 40)
            , borderRadius (px 2)
            , property "background-color" "var(--color-handle)"
-           , marginBottom (px 30)
            , property "filter" "none"
            , property "--add-note-icon-filter" "none"
            , hover
@@ -71,20 +71,22 @@ linkStyles =
     ]
 
 
-buttonLinkView :
+linkButtonView :
     { icon : List Style -> Html.Styled.Html msg
     , href : String
     , description : String
     }
     -> Html.Styled.Html msg
-buttonLinkView { icon, href, description } =
+linkButtonView { icon, href, description } =
     div
-        [ css (divStyles ++ linkStyles) ]
+        [ css divStyles ]
         [ a
-            [ css buttonStyles
-            , Attributes.href href
-            , attribute "aria-label" description
-            , title description
+            [ Attributes.href href ]
+            [ button
+                [ css (buttonStyles ++ linkStyles)
+                , attribute "aria-label" description
+                , title description
+                ]
+                [ icon iconStyles ]
             ]
-            [ icon iconStyles ]
         ]

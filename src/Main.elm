@@ -1,7 +1,7 @@
 port module Main exposing (Flags, Model, Msg, App, main)
 
 import Browser
-import ButtonView exposing (buttonLinkView, buttonView)
+import ButtonView exposing (linkButtonView, buttonView)
 import Css
 import Dict exposing (Dict)
 import Html.Styled exposing (Html, b, div, h1, p, span, text)
@@ -331,7 +331,7 @@ buttonRow =
             , Css.justifyContent Css.center
             ]
         ]
-        [ buttonLinkView
+        [ linkButtonView
             { icon = Icons.github
             , href = "https://github.com/marc-llop/shared-notes-elm"
             , description = "GitHub"
