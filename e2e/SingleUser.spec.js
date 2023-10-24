@@ -1,5 +1,6 @@
 const { test, expect } = require('@playwright/test')
 const { MainPage } = require('./MainPage')
+const { getTextarea, getDeleteButton } = require('./NoteHelpers')
 
 async function waitForRequest() {
     return new Promise(resolve => setTimeout(resolve, 400))
@@ -47,6 +48,41 @@ test('adds, edits, stores and deletes a note', async ({ page }) => {
     await deleteButton.click()
     await expect(mainPage.notes).toHaveCount(0)
 
+    await waitForRequest()
+    await page.reload()
+    await waitForRequest()
+    await expect(mainPage.notes).toHaveCount(0)
+})
+
+test('edits several notes', async ({ page }) => {
+    const mainPage = new MainPage(page)
+    await mainPage.goTo()
+    await expect(mainPage.notes).toHaveCount(0)
+
+    await mainPage.addNoteButton.click()
+    await mainPage.addNoteButton.click()
+    await mainPage.addNoteButton.click()
+    await expect(mainPage.notes).toHaveCount(3)
+
+    await getTextarea(mainPage.notes.nth(0)).fill('one')
+    await getTextarea(mainPage.notes.nth(1)).fill('two')
+    await getTextarea(mainPage.notes.nth(2)).fill('three')
+    await expect(getTextarea(mainPage.notes.nth(0))).toHaveValue('one')
+    await expect(getTextarea(mainPage.notes.nth(1))).toHaveValue('two')
+    await expect(getTextarea(mainPage.notes.nth(2))).toHaveValue('three')
+
+    await waitForRequest()
+    await page.reload()
+    await waitForRequest()
+    await expect(mainPage.notes).toHaveCount(3)
+    await expect(getTextarea(mainPage.notes.nth(0))).toHaveValue('one')
+    await expect(getTextarea(mainPage.notes.nth(1))).toHaveValue('two')
+    await expect(getTextarea(mainPage.notes.nth(2))).toHaveValue('three')
+
+    await getDeleteButton(mainPage.notes.nth(2)).click()
+    await getDeleteButton(mainPage.notes.nth(1)).click()
+    await getDeleteButton(mainPage.notes.nth(0)).click()
+    await expect(mainPage.notes).toHaveCount(0)
     await waitForRequest()
     await page.reload()
     await waitForRequest()
