@@ -31,7 +31,7 @@ test('adds, edits, stores and deletes a note', async ({ page }) => {
     await mainPage.addNoteButton.click()
     await expect(mainPage.notes).toHaveCount(1)
     const noteContent = 'Test note 1'
-    const noteTextarea = mainPage.getNoteTextarea(mainPage.notes.first())
+    const noteTextarea = getTextarea(mainPage.notes.first())
     await noteTextarea.fill(noteContent)
     await expect(noteTextarea).toHaveValue(noteContent)
 
@@ -43,7 +43,7 @@ test('adds, edits, stores and deletes a note', async ({ page }) => {
     await expect(newNote).toBeVisible()
 
     await newNote.click({ force: true })
-    const deleteButton = mainPage.getNoteDeleteButton(newNote)
+    const deleteButton = getDeleteButton(newNote)
     await expect(deleteButton).toBeVisible()
     await deleteButton.click()
     await expect(mainPage.notes).toHaveCount(0)
