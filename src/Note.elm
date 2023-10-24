@@ -10,7 +10,7 @@ module Note exposing
     , deleteNote
     , storedNotesDecoder
     , updateNoteText
-    , noteOrder
+    , compareNoteOrder
     )
 
 import AutoTextarea
@@ -184,17 +184,18 @@ noteToPair : Note -> ( String, Note )
 noteToPair note =
     ( noteIdString note, note )
 
-{-| Returns an integer that tells the position this
-note should appear in the list, so as to preserve the
-creation order of stored notes.
+{-| Preserve the order by relying on the serverIds auto-increment.
+TODO: Provide notes of createdAt field.
 -}
-noteOrder : Note -> Int
-noteOrder note =
-    case note of
-        Stored serverId _ _ -> serverId
-        ClientOnly _ _ -> 0
+compareNoteOrder : Note -> Note -> Order
+compareNoteOrder a b =
+    case (a, b) of
+        (Stored serverIdA _ _, Stored serverIdB _ _) -> compare serverIdA serverIdB
+        (Stored _ _ _, ClientOnly _ _) -> LT
+        (ClientOnly _ _, Stored _ _ _) -> GT
+        (ClientOnly _ _, ClientOnly _ _) -> EQ
 
-noteView : 
+noteView :
     { note : Note
     , onInput : Note -> String -> msg
     , onDelete : Note -> msg

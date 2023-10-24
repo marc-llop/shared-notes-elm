@@ -357,7 +357,7 @@ openNotebook notebookId notes clipboardState =
         notesList =
             Dict.toList notes
                 |> List.map Tuple.second
-                |> List.sortBy Note.noteOrder
+                |> List.sortWith Note.compareNoteOrder
                 |> List.map (\note -> noteView
                     { note = note
                     , onInput = WriteNote
