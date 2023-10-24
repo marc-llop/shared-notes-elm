@@ -1,12 +1,8 @@
 const { test, expect } = require('@playwright/test')
-const { MainPage } = require('./MainPage')
+const { MainPage, waitForRequest } = require('./MainPage')
 const { getTextarea, getDeleteButton } = require('./NoteHelpers')
 
 const supabaseUrl = 'https://akgwogzitroqskdmgwqj.supabase.co/rest/v1/**'
-
-async function waitForRequest() {
-    return new Promise(resolve => setTimeout(resolve, 1000))
-}
 
 test('has title', async ({ page }) => {
     const mainPage = new MainPage(page)
@@ -37,8 +33,7 @@ test('adds, edits, stores and deletes a note', async ({ page }) => {
     await noteTextarea.fill(noteContent)
     await expect(noteTextarea).toHaveValue(noteContent)
 
-    await waitForRequest()
-    await page.reload()
+    await mainPage.reload()
     await expect(mainPage.notes).toHaveCount(1)
     await expect(noteTextarea).toHaveValue(noteContent)
     const newNote = mainPage.getNoteWithContent(noteContent)
@@ -50,9 +45,7 @@ test('adds, edits, stores and deletes a note', async ({ page }) => {
     await deleteButton.click()
     await expect(mainPage.notes).toHaveCount(0)
 
-    await waitForRequest()
-    await page.reload()
-    await waitForRequest()
+    await mainPage.reload()
     await expect(mainPage.notes).toHaveCount(0)
 })
 
@@ -73,9 +66,7 @@ test('edits several notes', async ({ page }) => {
     await expect(getTextarea(mainPage.notes.nth(1))).toHaveValue('two')
     await expect(getTextarea(mainPage.notes.nth(2))).toHaveValue('three')
 
-    await waitForRequest()
-    await page.reload()
-    await waitForRequest()
+    await mainPage.reload()
     await expect(mainPage.notes).toHaveCount(3)
     await expect(getTextarea(mainPage.notes.nth(0))).toHaveValue('one')
     await expect(getTextarea(mainPage.notes.nth(1))).toHaveValue('two')
@@ -85,9 +76,7 @@ test('edits several notes', async ({ page }) => {
     await getDeleteButton(mainPage.notes.nth(1)).click()
     await getDeleteButton(mainPage.notes.nth(0)).click()
     await expect(mainPage.notes).toHaveCount(0)
-    await waitForRequest()
-    await page.reload()
-    await waitForRequest()
+    await mainPage.reload()
     await expect(mainPage.notes).toHaveCount(0)
 })
 
@@ -128,9 +117,7 @@ test('reattempts storing new notes after connection is recovered', async ({
     await mainPage.addNoteWithContent('three')
 
     // Reload and check all notes
-    await waitForRequest()
-    await page.reload()
-    await waitForRequest()
+    await mainPage.reload()
     await expect(mainPage.notes).toHaveCount(3)
     await expect(getTextarea(mainPage.notes.nth(0))).toHaveValue('one')
     await expect(getTextarea(mainPage.notes.nth(1))).toHaveValue('two')

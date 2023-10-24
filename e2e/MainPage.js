@@ -5,6 +5,8 @@ async function waitForRequest() {
     return new Promise(resolve => setTimeout(resolve, 1000))
 }
 
+exports.waitForRequest = waitForRequest
+
 exports.MainPage = class MainPage {
     constructor(page) {
         this.page = page
@@ -27,6 +29,12 @@ exports.MainPage = class MainPage {
     async goToNotebook(notebookId) {
         await this.page.goto(notebookId)
         await expect(this.page).toHaveURL(notebookId)
+    }
+
+    async reload() {
+        await waitForRequest()
+        await this.page.reload()
+        await waitForRequest()
     }
 
     getNoteWithContent(content) {
