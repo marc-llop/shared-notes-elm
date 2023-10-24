@@ -2,8 +2,10 @@ const { test, expect } = require('@playwright/test')
 const { MainPage } = require('./MainPage')
 const { getTextarea, getDeleteButton } = require('./NoteHelpers')
 
+const supabaseUrl = 'https://akgwogzitroqskdmgwqj.supabase.co/rest/v1/**'
+
 async function waitForRequest() {
-    return new Promise(resolve => setTimeout(resolve, 400))
+    return new Promise(resolve => setTimeout(resolve, 1000))
 }
 
 test('has title', async ({ page }) => {
@@ -106,4 +108,33 @@ test('allows room sharing by URL and copying ID to clipboard', async ({
 
     await mainPage.clipboardButton.blur()
     await expect(mainPage.clipboardMessage).not.toBeVisible()
+})
+
+test('reattempts storing new notes after connection is recovered', async ({
+    page,
+}) => {
+    const mainPage = new MainPage(page)
+    await mainPage.goTo()
+
+    // Add two notes with no connection
+    await page.route(supabaseUrl, route => route.abort())
+    await expect(mainPage.notes).toHaveCount(0)
+    await mainPage.addNoteWithContent('one')
+    await mainPage.addNoteWithContent('two')
+    await expect(mainPage.notes).toHaveCount(2)
+
+    // Recover connection and add one note
+    await page.unroute(supabaseUrl)
+    await mainPage.addNoteWithContent('three')
+
+    // Reload and check all notes
+    await waitForRequest()
+    await page.reload()
+    await waitForRequest()
+    await expect(mainPage.notes).toHaveCount(3)
+    await expect(getTextarea(mainPage.notes.nth(0))).toHaveValue('one')
+    await expect(getTextarea(mainPage.notes.nth(1))).toHaveValue('two')
+    await expect(getTextarea(mainPage.notes.nth(2))).toHaveValue('three')
+    await mainPage.removeNotes(3)
+    await waitForRequest()
 })

@@ -1,4 +1,9 @@
 const { expect } = require('@playwright/test')
+const { getTextarea, getDeleteButton } = require('./NoteHelpers')
+
+async function waitForRequest() {
+    return new Promise(resolve => setTimeout(resolve, 1000))
+}
 
 exports.MainPage = class MainPage {
     constructor(page) {
@@ -26,5 +31,26 @@ exports.MainPage = class MainPage {
 
     getNoteWithContent(content) {
         return this.notes.filter({ hasText: new RegExp(content) })
+    }
+
+    async addNoteWithContent(content) {
+        await this.addNoteButton.click()
+        const note = this.notes.last()
+        await expect(getTextarea(note)).toBeEmpty()
+        await getTextarea(note).fill(content)
+        await expect(getTextarea(note)).toHaveValue(content)
+        return note
+    }
+
+    async removeNotes(amount) {
+        if (typeof amount !== 'number' || amount < 0) {
+            throw new Error(
+                'removeNotes(amount): amount should be a positive integer!',
+            )
+        }
+        for (let remaining = amount; remaining > 0; remaining--) {
+            await getDeleteButton(this.notes.first()).click()
+        }
+        await waitForRequest()
     }
 }
