@@ -1,6 +1,6 @@
 const { test, expect } = require('@playwright/test')
 const { MainPage, waitForRequest } = require('./MainPage')
-const { getTextarea, getDeleteButton } = require('./NoteHelpers')
+const { getTextarea, getDeleteButton, editNote } = require('./NoteHelpers')
 
 const supabaseUrl = 'https://akgwogzitroqskdmgwqj.supabase.co/rest/v1/**'
 
@@ -122,6 +122,35 @@ test('reattempts storing new notes after connection is recovered', async ({
     await expect(getTextarea(mainPage.notes.nth(0))).toHaveValue('one')
     await expect(getTextarea(mainPage.notes.nth(1))).toHaveValue('two')
     await expect(getTextarea(mainPage.notes.nth(2))).toHaveValue('three')
+    await mainPage.removeNotes(3)
+    await waitForRequest()
+})
+
+test('reattempts storing unsaved changes after connection is recovered', async ({
+    page,
+}) => {
+    const mainPage = new MainPage(page)
+    await mainPage.goTo()
+
+    // Add two notes
+    await expect(mainPage.notes).toHaveCount(0)
+    await mainPage.addNoteWithContent('one')
+    await mainPage.addNoteWithContent('two')
+    await expect(mainPage.notes).toHaveCount(2)
+
+    // Edit one note with no connection
+    await page.route(supabaseUrl, route => route.abort())
+    await editNote(mainPage.getNoteWithContent('one'), 'one more')
+    await expect(mainPage.getNoteWithContent('one more')).toBeVisible()
+    await waitForRequest()
+
+    // Recover connection and add one note
+    await page.unroute(supabaseUrl)
+    await mainPage.addNoteWithContent('three')
+
+    // Reload and check edited note
+    await mainPage.reload()
+    await expect(mainPage.getNoteWithContent('one more')).toBeVisible()
     await mainPage.removeNotes(3)
     await waitForRequest()
 })
