@@ -1,6 +1,11 @@
-exports.getTextarea = note => note.getByRole('textbox')
+const getTextarea = note => note.getByRole('textbox')
+exports.getTextarea = getTextarea
 
-exports.getDeleteButton = note => {
+const getDeleteButton = note => {
     note.click()
     return note.getByTitle('Delete note')
 }
+exports.getDeleteButton = getDeleteButton
+
+const editNote = (note, newContent) => getTextarea(note).fill(newContent)
+exports.editNote = editNote
