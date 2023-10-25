@@ -102,6 +102,8 @@ test('allows room sharing by URL and copying ID to clipboard', async ({
 test('reattempts storing new notes after connection is recovered', async ({
     page,
 }) => {
+    // TODO intercept calls to localStorage so we are only testing in-memory sync
+    // window.addEventListener('storage', () => ...) maybe?
     const mainPage = new MainPage(page)
     await mainPage.goTo()
 
@@ -129,6 +131,7 @@ test('reattempts storing new notes after connection is recovered', async ({
 test('reattempts storing unsaved changes after connection is recovered', async ({
     page,
 }) => {
+    // TODO intercept calls to localStorage so we are only testing in-memory sync
     const mainPage = new MainPage(page)
     await mainPage.goTo()
 
