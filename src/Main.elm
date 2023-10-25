@@ -15,7 +15,7 @@ import Notebook exposing (insertNotebook)
 import Random
 import Spinner exposing (spinner)
 import ClipboardButton exposing (ClipboardState, ClipboardMsg)
-
+import Debug exposing (todo)
 
 port updateLocation : String -> Cmd msg
 
@@ -25,7 +25,9 @@ type alias Notes =
 
 type App
     = OpeningNotebook
-    | NotebookOpen NotebookId Notes
+    | NotebookNotStored NotebookId Notes
+    | NotebookOnline NotebookId Notes
+    | NotebookOffline NotebookId Notes
 
 type alias Model =
     { randomSeed : Random.Seed
@@ -57,7 +59,7 @@ init { path, randomSeed } =
         existingNotebook : NotebookId -> ( App, Cmd Msg )
         existingNotebook notebookId =
             ( OpeningNotebook
-            , Notebook.checkNotebookExists NotebookFound notebookId
+            , Notebook.checkNotebookExists NotebookChecked notebookId
             )
 
         newApp : ( App, Cmd Msg )
@@ -94,8 +96,8 @@ main =
 
 
 type Msg
-    = WordsFetched (Result Http.Error ( String, String ))
-    | NotebookFound (Result Http.Error NotebookId)
+    = NotebookChecked (Result Http.Error NotebookId)
+    | WordsFetched (Result Http.Error ( String, String )) 
     | NotebookFetched NotebookId (Result Http.Error ( List Note, Random.Seed ))
     | NotebookStored (Result Http.Error NotebookId)
     | ClipboardMsgContainer ClipboardMsg
@@ -113,30 +115,52 @@ update msg model =
         OpeningNotebook ->
             updateOpeningNotebook msg model
 
-        NotebookOpen notebookId notes ->
-            updateOpenNotebook msg model notebookId notes
+        NotebookNotStored notebookId notes ->
+            updateNotebookNotStored msg model notebookId notes
+
+        NotebookOnline notebookId notes ->
+            updateNotebookOnline msg model notebookId notes
+
+        NotebookOffline notebookId notes ->
+            updateNotebookOffline msg model notebookId notes
 
 
 updateOpeningNotebook : Msg -> Model -> ( Model, Cmd Msg )
 updateOpeningNotebook msg model =
     case msg of
+        NotebookChecked result ->
+            let
+                networkOkButNotebookNotFound : ( Model, Cmd Msg )
+                networkOkButNotebookNotFound = ( model, Identifiers.fetchTwoWords WordsFetched )
+
+                networkFailed : ( Model, Cmd Msg )
+                networkFailed = generateNotebookIdWithoutWords model.randomSeed
+                    |> openNewNotebookOffline
+            in
+                case result of
+                    Ok notebookId ->
+                        ( model
+                        , Notebook.getNotebookNotes model.randomSeed (NotebookFetched notebookId) notebookId
+                        )
+
+                    Err (Http.BadStatus _) ->
+                        networkOkButNotebookNotFound
+
+                    Err (Http.BadBody _) ->
+                        networkOkButNotebookNotFound
+
+                    Err _ ->
+                        networkFailed
+
         WordsFetched result ->
             case result of
                 Ok ( a, b ) ->
                     generateNotebookIdFromWords ( a, b ) model.randomSeed
+                        |> openNewNotebookOnline
 
                 Err _ ->
                     generateNotebookIdWithoutWords model.randomSeed
-
-        NotebookFound result ->
-            case result of
-                Ok notebookId ->
-                    ( model
-                    , Notebook.getNotebookNotes model.randomSeed (NotebookFetched notebookId) notebookId
-                    )
-
-                Err _ ->
-                    ( model, Identifiers.fetchTwoWords WordsFetched )
+                        |> openNewNotebookOnline
 
         NotebookFetched notebookId result ->
             case result of
@@ -178,20 +202,23 @@ updateOpeningNotebook msg model =
             ( model, Cmd.none )
 
 
-updateOpenNotebook : Msg -> Model -> NotebookId -> Notes -> ( Model, Cmd Msg )
-updateOpenNotebook msg model notebookId notes =
+updateNotebookOnline : Msg -> Model -> NotebookId -> Notes -> ( Model, Cmd Msg )
+updateNotebookOnline msg model notebookId notes =
     case msg of
-        WordsFetched _ ->
+        NotebookChecked _ ->
             ( model, Cmd.none )
 
-        NotebookFound _ ->
+        WordsFetched _ ->
             ( model, Cmd.none )
 
         NotebookFetched _ _ ->
             ( model, Cmd.none )
 
-        NotebookStored _ ->
-            ( model, Cmd.none )
+        NotebookStored result ->
+            case result of
+                Ok _ -> ( {model | app = NotebookOffline notebookId notes}, syncNotes )
+
+                Err _ -> ( {model | app = NotebookNotStored notebookId notes}, Cmd.none )
 
         ClipboardMsgContainer clipboardMsg ->
             let
@@ -275,10 +302,13 @@ updateOpenNotebook msg model notebookId notes =
                 Err _ ->
                     ( model, Cmd.none )
 
-openNewNotebookInModel : Random.Seed -> NotebookId -> ( Model, Cmd Msg )
-openNewNotebookInModel newSeed notebookId =
+{-| Updates the notebook to reflect the notebook is open.
+Updates the location and tries to store the notebook.
+-}
+openNewNotebookOnline : (Random.Seed, NotebookId) -> ( Model, Cmd Msg )
+openNewNotebookOnline (newSeed, notebookId) =
     ( { randomSeed = newSeed
-      , app = NotebookOpen notebookId Dict.empty
+      , app = NotebookNotStored notebookId Dict.empty
       , clipboardState = ClipboardButton.initClipboardState
       }
     , Cmd.batch
@@ -287,21 +317,27 @@ openNewNotebookInModel newSeed notebookId =
         ]
     )
 
+{-| Updates the model to reflect the notebook is open. 
+Does not update the URL, does not try to store the notebook.
+-}
+openNewNotebookOffline : (Random.Seed, NotebookId) -> (Model, Cmd Msg)
+openNewNotebookOffline (newSeed, notebookId) =
+    ( { randomSeed = newSeed
+      , app = NotebookNotStored notebookId Dict.empty
+      , clipboardState = ClipboardButton.initClipboardState
+      }
+    , Cmd.none
+    )
 
-generateNotebookIdFromWords : ( String, String ) -> Random.Seed -> ( Model, Cmd Msg )
-generateNotebookIdFromWords ( a, b ) seed =
+generateNotebookIdFromWords : ( String, String ) -> Random.Seed -> (Random.Seed, NotebookId)
+generateNotebookIdFromWords (a, b) seed =
     let
         ( c, newSeed ) =
             Random.step Identifiers.wordGenerator seed
-
-        notebookId : NotebookId
-        notebookId =
-            Identifiers.notebookIdFromWords a b c
     in
-    openNewNotebookInModel newSeed notebookId
+        (newSeed, Identifiers.notebookIdFromWords a b c)
 
-
-generateNotebookIdWithoutWords : Random.Seed -> ( Model, Cmd Msg )
+generateNotebookIdWithoutWords : Random.Seed -> (Random.Seed, NotebookId)
 generateNotebookIdWithoutWords seed =
     let
         ( a, seed1 ) =
@@ -310,8 +346,10 @@ generateNotebookIdWithoutWords seed =
         ( b, seed2 ) =
             Random.step Identifiers.wordGenerator seed1
     in
-    generateNotebookIdFromWords ( a, b ) seed2
+        generateNotebookIdFromWords (a, b) seed2
 
+syncNotes : Cmd Msg
+syncNotes = todo "Download up-to-date notes, replace updated notes, duplicate conflicts, delete notes deleted locally, and store new notes and conflicts"
 
 updateNoteToStored : Note -> Dict String Note -> Dict String Note
 updateNoteToStored note notes =
