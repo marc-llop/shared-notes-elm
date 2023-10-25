@@ -154,3 +154,25 @@ test('reattempts storing unsaved changes after connection is recovered', async (
     await mainPage.removeNotes(3)
     await waitForRequest()
 })
+
+test('keeps unsaved notes in memory when reloading', async ({ page }) => {
+    // Open a notebook with no connection
+    await page.route(supabaseUrl, route => route.abort())
+    const mainPage = new MainPage(page)
+    await mainPage.goTo()
+    const notebookId = await mainPage.notebookId.textContent()
+
+    // Add two notes with no connection
+    await expect(mainPage.notes).toHaveCount(0)
+    await mainPage.addNoteWithContent('one')
+    await mainPage.addNoteWithContent('two')
+    await expect(mainPage.notes).toHaveCount(2)
+
+    // Reload and check notebook and notes are the same
+    await mainPage.reload()
+    await expect(mainPage.notebookId).toHaveText(notebookId)
+    await expect(mainPage.getNoteWithContent('one')).toBeVisible()
+    await expect(mainPage.getNoteWithContent('two')).toBeVisible()
+    await mainPage.removeNotes(2)
+    await waitForRequest()
+})

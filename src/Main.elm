@@ -5,7 +5,7 @@ import ButtonView exposing (linkButtonView, buttonView)
 import Css
 import Dict exposing (Dict)
 import Html.Styled exposing (Html, b, div, h1, p, span, text)
-import Html.Styled.Attributes as Attributes exposing (class)
+import Html.Styled.Attributes as Attributes exposing (class, attribute)
 import Html.Styled.Keyed as Keyed
 import Http
 import Icons
@@ -344,7 +344,7 @@ notebookIdView notebookId state =
         idString : String
         idString = Identifiers.notebookIdToString notebookId
     in
-        div [ class "notebookId" ]
+        div [ class "notebookId", attribute "data-testid" "notebookId" ]
             [ span [] [ text idString ]
             , ClipboardButton.clipboardButtonView state
                 |> Html.Styled.map ClipboardMsgContainer

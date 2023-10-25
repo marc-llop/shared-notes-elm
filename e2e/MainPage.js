@@ -15,6 +15,7 @@ exports.MainPage = class MainPage {
 
         /* LOCATORS */
         this.title = page.getByRole('heading')
+        this.notebookId = page.getByTestId('notebookId')
         this.clipboardButton = page.getByTitle('Copy to clipboard')
         this.clipboardMessage = page.getByText('Copied!')
         this.githubLink = page.getByRole('link', { title: 'GitHub' })
