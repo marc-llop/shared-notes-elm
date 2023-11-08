@@ -93,6 +93,9 @@ main =
         }
 
 
+-- TODO: Join messages in types (e.g. InitializationMsg WordsFetched)
+-- TODO: Simplify Results in decoders (ServerError | ConnectionError instead of Http.Error)
+
 type Msg
     = WordsFetched (Result Http.Error ( String, String ))
     | NotebookFound (Result Http.Error NotebookId)
