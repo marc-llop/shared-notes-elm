@@ -428,6 +428,13 @@ notebookView notebookId notes clipboardState =
                     , onInput = WriteNote
                     , onDelete = DeleteNote
                     })
+
+        addNoteButton : Html Msg
+        addNoteButton = buttonView
+            { icon = Icons.plus
+            , onClick = AddNote
+            , description = "Add Note"
+            }
     in
     div [ class "notebook" ]
         [ notebookIdView notebookId clipboardState
@@ -435,7 +442,7 @@ notebookView notebookId notes clipboardState =
         , p [] [ text "Be mindful of what you write here. Never write any personal information, passwords, or any information you want to protect." ]
         , buttonRow
         , Keyed.ul [ class "notesList" ] notesList
-        , buttonView { icon = Icons.plus, onClick = AddNote, description = "Add Note" }
+        , addNoteButton
         ]
 
 
