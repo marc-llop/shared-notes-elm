@@ -134,7 +134,7 @@ updateOpeningNotebook msg model =
                 networkOkButNotebookNotFound = ( model, Identifiers.fetchTwoWords WordsFetched )
 
                 networkFailed : ( Model, Cmd Msg )
-                networkFailed = generateNotebookIdWithoutWords model.randomSeed
+                networkFailed = fullyRandomNotebookId model.randomSeed
                     |> openNewNotebookOffline
             in
                 case result of
@@ -155,11 +155,11 @@ updateOpeningNotebook msg model =
         WordsFetched result ->
             case result of
                 Ok ( a, b ) ->
-                    generateNotebookIdFromWords ( a, b ) model.randomSeed
+                    randomNotebookIdWithWords ( a, b ) model.randomSeed
                         |> openNewNotebookOnline
 
                 Err _ ->
-                    generateNotebookIdWithoutWords model.randomSeed
+                    fullyRandomNotebookId model.randomSeed
                         |> openNewNotebookOnline
 
         NotebookFetched notebookId result ->
@@ -329,16 +329,21 @@ openNewNotebookOffline (newSeed, notebookId) =
     , Cmd.none
     )
 
-generateNotebookIdFromWords : ( String, String ) -> Random.Seed -> (Random.Seed, NotebookId)
-generateNotebookIdFromWords (a, b) seed =
+{-| Returns a NotebookId made with the supplied two words and a randomly
+generated one.
+-}
+randomNotebookIdWithWords : ( String, String ) -> Random.Seed -> (Random.Seed, NotebookId)
+randomNotebookIdWithWords (a, b) seed =
     let
         ( c, newSeed ) =
             Random.step Identifiers.wordGenerator seed
     in
         (newSeed, Identifiers.notebookIdFromWords a b c)
 
-generateNotebookIdWithoutWords : Random.Seed -> (Random.Seed, NotebookId)
-generateNotebookIdWithoutWords seed =
+{-| Returns a NotebookId made from three randomly generated words.
+-}
+fullyRandomNotebookId : Random.Seed -> (Random.Seed, NotebookId)
+fullyRandomNotebookId seed =
     let
         ( a, seed1 ) =
             Random.step Identifiers.wordGenerator seed
@@ -346,7 +351,7 @@ generateNotebookIdWithoutWords seed =
         ( b, seed2 ) =
             Random.step Identifiers.wordGenerator seed1
     in
-        generateNotebookIdFromWords (a, b) seed2
+        randomNotebookIdWithWords (a, b) seed2
 
 syncNotes : Cmd Msg
 syncNotes = todo "Download up-to-date notes, replace updated notes, duplicate conflicts, delete notes deleted locally, and store new notes and conflicts"
