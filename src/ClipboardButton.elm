@@ -9,12 +9,16 @@ import Icons
 
 port copyToClipboard : String -> Cmd msg
 
+{-| The copy-to-clipboard button displays a success message when clicked, and the 
+message disappears when the focus shifts to another element.
+This state specifies wether to display it or not.
+-}
 type ClipboardState
-    = NotCopied
-    | Copied
+    = CopiedMessageHidden
+    | CopiedMessageDisplayed
 
 initClipboardState : ClipboardState
-initClipboardState = NotCopied
+initClipboardState = CopiedMessageHidden
 
 type ClipboardMsg
     = ClickedCopyToClipboard
@@ -28,12 +32,12 @@ updateClipboardState :
 updateClipboardState notebookId msg _ =
     case msg of
         ClickedCopyToClipboard ->
-            ( Copied
+            ( CopiedMessageDisplayed
             , copyToClipboard (Identifiers.notebookIdToString notebookId)
             )
         
         ButtonFocusLost ->
-            ( NotCopied, Cmd.none )
+            ( CopiedMessageHidden, Cmd.none )
 
 inlineLinkStyles : List Style
 inlineLinkStyles =
@@ -87,6 +91,6 @@ clipboardButtonView state =
             , onBlurMsg = ButtonFocusLost
             }
         , case state of
-            NotCopied -> text ""
-            Copied -> span [] [ text "Copied!" ]
+            CopiedMessageHidden -> text ""
+            CopiedMessageDisplayed -> span [] [ text "Copied!" ]
         ]
