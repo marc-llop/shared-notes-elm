@@ -160,8 +160,10 @@ updateOpeningNotebook msg model =
                         , Notebook.getNotebookNotes model.randomSeed (NotebookFetched notebookId) notebookId
                         )
 
-                    Err (Http.BadStatus _) ->
-                        networkOkButNotebookNotFound
+                    Err (Http.BadStatus status) ->
+                        if status < 500
+                            then networkOkButNotebookNotFound
+                            else networkFailed
 
                     Err (Http.BadBody _) ->
                         networkOkButNotebookNotFound
