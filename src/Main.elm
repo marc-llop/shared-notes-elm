@@ -415,8 +415,8 @@ notebookIdView notebookId state =
                 |> Html.Styled.map ClipboardMsgContainer
             ]
 
-openNotebook : NotebookId -> Notes -> ClipboardState -> Html Msg
-openNotebook notebookId notes clipboardState =
+notebookView : NotebookId -> Notes -> ClipboardState -> Html Msg
+notebookView notebookId notes clipboardState =
     let
         notesList : List ( String, Html Msg )
         notesList =
@@ -449,7 +449,7 @@ view model =
                     spinner
 
                 NotebookOpen notebookId notes ->
-                    openNotebook notebookId notes model.clipboardState
+                    notebookView notebookId notes model.clipboardState
     in
     div [ class "screen" ]
         [ div [ class "notebookScreen" ]
