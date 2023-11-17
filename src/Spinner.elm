@@ -79,7 +79,8 @@ rippleAnimation =
           )
         ]
 
-
+{-| Displays a loading spinner permanently animated.
+-}
 spinner : Html msg
 spinner =
     div [ css rippleStyles ]

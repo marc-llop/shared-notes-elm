@@ -22,16 +22,44 @@ import Json.Encode as Encode exposing (Value)
 import Random exposing (Seed)
 import Supabase exposing (patchSupabase, postSupabase, deleteSupabase, singletonDecoder)
 
+{-| An editable note. Contains some text and internal metadata.
 
+Notes can be in two states:
+
+- A `ClientOnly` note has never been synced with the server. It has a
+ClientId for referencing, guaranteed to be unique in this device.
+- A `Stored` note has at least once been synced. It has a ServerId guaranteed
+to be unique among all notes in this notebook. It keeps its ClientId, because
+it is their real ID as far as the client is concerned.
+
+A note can be promoted to Stored by adding the ID the server assigned to it,
+but it can never go back to ClientOnly. Otherwise, it would get duplicated when
+syncing.
+-}
 type Note
     = ClientOnly ClientId String
     | Stored ServerId ClientId String
 
 
+{-| The ClientId is a Note ID that uniquely identifies a note in this device. It is never stored remotely.
+
+A ClientId is generated when:
+
+- The user adds a new note.
+- The application syncs with the server and new notes are received, in which
+case they are all given new ClientIds.
+- The application loads a notebook from the server, in which case all its notes
+are given new ClientIds.
+-}
 type alias ClientId =
     String
 
+{-| The ServerId is a Note ID that uniquely identifies a note in the remote database.
 
+It can not be used as a reference because some notes may not be stored yet, and it is not guaranteed to be unique among ClientIds.
+
+The ServerId should only be used to build requests that update the note, never to reference notes in the application.
+-}
 type alias ServerId =
     Int
 
@@ -46,12 +74,14 @@ noteIdString note =
             clientId
 
 
+-- TODO: Make ClientId unique via an auto-increment.
 newClientId : Seed -> ( ClientId, Seed )
 newClientId seed =
     Random.step wordGenerator seed
         |> Tuple.mapFirst (\noteId -> "clientId-" ++ noteId)
 
-
+{-| A new Note with a generated ClientId.
+-}
 newNote : Seed -> ( Note, Seed )
 newNote seed =
     let
@@ -62,7 +92,8 @@ newNote seed =
     newClientId seed
         |> Tuple.mapFirst newNoteWithId
 
-
+{-| The same Note with this new text.
+-}
 updateNoteText : String -> Note -> Note
 updateNoteText str note =
     case note of
@@ -113,7 +144,9 @@ storedNotesDecoder seed =
     notesDecoder
         |> Decode.map (initializeIds seed)
 
-
+{-| Decodes only the first note in a list. Used in the cases we know Supabase
+is going to return a list with only one note.
+-}
 firstNoteDecoder : Decoder ( ServerId, String )
 firstNoteDecoder =
     singletonDecoder noteDecoder
@@ -180,6 +213,9 @@ deleteNote toMsg notebookId note =
                 , toMsg = toMsg
                 }
 
+{-| Provides the Note as an (ID, Note) tuple for indexing purposes (for
+example, a Dictionary).
+-}
 noteToPair : Note -> ( String, Note )
 noteToPair note =
     ( noteIdString note, note )
@@ -195,6 +231,8 @@ compareNoteOrder a b =
         (ClientOnly _ _, Stored _ _ _) -> GT
         (ClientOnly _ _, ClientOnly _ _) -> EQ
 
+{-| Displays the Note as an editable auto-rezised textarea.
+-}
 noteView :
     { note : Note
     , onInput : Note -> String -> msg
@@ -237,18 +275,24 @@ exampleNotes =
     ]
 -}
 
+{-| Creates a Note from its downloaded data by generating a new ClientId.
+-}
 newStoredNote : Seed -> ( ServerId, String ) -> ( Note, Seed )
 newStoredNote seed ( serverId, content ) =
     newClientId seed
         |> Tuple.mapFirst
             (\clientId -> Stored serverId clientId content)
 
-
+{-| Creates a Note from its downloaded data by giving it an existing ClientId.
+-}
 storedNoteFromClientNote : ClientId -> ( ServerId, String ) -> Note
 storedNoteFromClientNote clientId ( serverId, content ) =
     Stored serverId clientId content
 
 
+{-| Creates several Notes from their downloaded data by generating new
+ClientIds.
+-}
 initializeIds : Seed -> List ( ServerId, String ) -> ( List Note, Seed )
 initializeIds seed list =
     case list of

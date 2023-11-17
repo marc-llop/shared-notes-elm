@@ -23,6 +23,16 @@ port updateLocation : String -> Cmd msg
 type alias Notes =
     Dict String Note
 
+{-| The application can be in different states regarding its connection status:
+
+- `OpeningNotebook`: Initial state. The app doesn't know yet if it's going to 
+open an existing notebook or create a new one.
+- `NotebookNotStored`: A new notebook has been created, but the app hasn't had
+connection ever since, so the notebook only exists locally.
+- `NotebookOnline`: The app is in sync with the server.
+- `NotebookOffline`: The connection has been lost. Some reconciliation may need
+to be done upon recovery.
+-}
 type App
     = OpeningNotebook
     | NotebookNotStored NotebookId Notes
@@ -43,6 +53,13 @@ dictFromNotes noteList =
         |> Dict.fromList
 
 
+{-| Upon starting, the application receives from JS the following data:
+
+- `path`: The local part of the URL. Should contain the notebook the user is 
+trying to open.
+- `randomSeed`: A seed for random generation, preferably a cryptographically 
+strong one (crypto.getRandomValues()), to minimize collisions.
+-}
 type alias Flags =
     { path : String, randomSeed : Int }
 
@@ -366,6 +383,9 @@ updateNoteToStored note notes =
     Dict.update (noteIdString note) updateNote notes
 
 
+{-| Displays a row of icon-buttons for information of interest, like the link
+to this project's GitHub.
+-}
 buttonRow : Html msg
 buttonRow =
     div
@@ -381,6 +401,8 @@ buttonRow =
             }
         ]
 
+{-| Displays the NotebookId along with a copy-to-clipboard button.
+-}
 notebookIdView : NotebookId -> ClipboardState -> Html Msg
 notebookIdView notebookId state =
     let

@@ -66,6 +66,8 @@ insertNotebook toMsg notebookId =
         }
 
 
+{-| Returns the notebookId from the remote database if the notebook exists in it.
+-}
 checkNotebookExists : (Result Http.Error NotebookId -> msg) -> NotebookId -> Cmd msg
 checkNotebookExists toMsg notebookId =
     getSupabase
