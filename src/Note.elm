@@ -6,7 +6,7 @@ module Note exposing
     , noteIdString
     , noteToPair
     , noteView
-    , patchNote
+    , upsertNote
     , deleteNote
     , storedNotesDecoder
     , updateNoteText
@@ -20,7 +20,7 @@ import Identifiers exposing (NotebookId, notebookIdToString, wordGenerator)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
 import Random exposing (Seed)
-import Supabase exposing (patchSupabase, postSupabase, deleteSupabase, singletonDecoder)
+import Supabase exposing (upsertSupabase, postSupabase, deleteSupabase, singletonDecoder)
 
 {-| An editable note. Contains some text and internal metadata.
 
@@ -186,18 +186,25 @@ insertNewNote oldNote toMsg notebookId =
                 , toMsg = toMsg
                 }
 
-
-patchNote : Seed -> (Result Http.Error ( Note, Seed ) -> msg) -> NotebookId -> Note -> Cmd msg
-patchNote seed toMsg notebookId note =
+{-| Updates a note in the remote database. If the note didn't exist (or was 
+deleted by someone else) inserts it as a new note.
+-}
+upsertNote : (Result Http.Error Note -> msg) -> NotebookId -> Note -> Cmd msg
+upsertNote toMsg notebookId note =
     case note of
-        ClientOnly _ _ ->
-            Cmd.none
-
-        Stored serverId _ _ ->
-            patchSupabase
-                { path = noteEndpoint notebookId serverId
+        ClientOnly clientId _ ->
+            postSupabase
+                { path = notesEndpoint
                 , body = encodeNote notebookId note
-                , decoder = Decode.map (newStoredNote seed) firstNoteDecoder
+                , decoder = Decode.map (storedNoteFromClientNote clientId) firstNoteDecoder
+                , toMsg = toMsg
+                }
+
+        Stored _ clientId _ ->
+            upsertSupabase
+                { path = notesEndpoint
+                , body = encodeNote notebookId note
+                , decoder = Decode.map (storedNoteFromClientNote clientId) firstNoteDecoder
                 , toMsg = toMsg
                 }
 
@@ -231,6 +238,15 @@ compareNoteOrder a b =
         (ClientOnly _ _, Stored _ _ _) -> GT
         (ClientOnly _ _, ClientOnly _ _) -> EQ
 
+noteContent : Note -> String
+noteContent note =
+    case note of
+        ClientOnly _ content ->
+            content
+
+        Stored _ _ content ->
+            content
+
 {-| Displays the Note as an editable auto-rezised textarea.
 -}
 noteView :
@@ -244,19 +260,10 @@ noteView { note, onInput, onDelete } =
         noteId : String
         noteId =
             noteIdString note
-
-        content : String
-        content =
-            case note of
-                ClientOnly _ c ->
-                    c
-
-                Stored _ _ c ->
-                    c
     in
     ( noteId
     , AutoTextarea.autoTextarea
-        { value = content
+        { value = noteContent note
         , onInput = onInput note
         , onDelete = onDelete note
         , placeholder = ""

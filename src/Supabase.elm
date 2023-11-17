@@ -64,6 +64,7 @@ getSupabase { path, decoder, toMsg } =
         { path = "notes"
         , body = encodeNote note
         , decoder = noteDecoder
+        , toMsg = NoteStored
         }
 
 -}
@@ -94,6 +95,7 @@ already existing rows).
         { path = "notes"
         , body = encodeNoteList notes
         , decoder = nodeListDecoder
+        , toMsg = NoteUpdated
         }
 
 -}
@@ -126,6 +128,7 @@ upsertSupabase { path, body, decoder, toMsg } =
         { path = "notes?id=eq.1"
         , body = encodeNote updatedNote
         , decoder = noteDecoder
+        , toMsg = NoteUpdated
         }
 
 -}
@@ -147,6 +150,14 @@ patchSupabase { path, body, decoder, toMsg } =
         , tracker = Nothing
         }
 
+{-| Deletes all matching rows. You can filter affected rows with path.
+
+    deleteSupabase
+        { path = "notes?id=eq.1"
+        , toMsg = NoteUpdated
+        }
+
+-}
 deleteSupabase :
     { path : String
     , toMsg : Result Http.Error () -> msg

@@ -30,8 +30,8 @@ open an existing notebook or create a new one.
 - `NotebookNotStored`: A new notebook has been created, but the app hasn't had
 connection ever since, so the notebook only exists locally.
 - `NotebookOnline`: The app is in sync with the server.
-- `NotebookOffline`: The connection has been lost. Some reconciliation may need
-to be done upon recovery.
+- `NotebookOffline`: The connection has been lost, or just recovered. Some 
+reconciliation may need to be done upon recovery.
 -}
 type App
     = OpeningNotebook
@@ -121,7 +121,7 @@ type Msg
     | WriteNote Note String
     | AddNote
     | NoteStored (Result Http.Error Note)
-    | NoteUpdated Note (Result Http.Error ( Note, Random.Seed ))
+    | NoteUpdated Note (Result Http.Error Note)
     | DeleteNote Note
     | NoteDeleted Note (Result Http.Error ())
 
@@ -185,14 +185,14 @@ updateOpeningNotebook msg model =
             case result of
                 Ok ( notes, newSeed ) ->
                     ( { model
-                        | app = NotebookOpen notebookId (dictFromNotes notes)
+                        | app = NotebookOnline notebookId (dictFromNotes notes)
                         , randomSeed = newSeed
                       }
                     , Cmd.none
                     )
 
                 Err _ ->
-                    ( { model | app = NotebookOpen notebookId Dict.empty }
+                    ( { model | app = NotebookOffline notebookId Dict.empty }
                     , Cmd.none
                     )
 
@@ -241,7 +241,10 @@ updateNotebookOnline msg model notebookId notes =
 
         ClipboardMsgContainer clipboardMsg ->
             let
-                (newClipboardState, clipboardCmd) = ClipboardButton.updateClipboardState notebookId clipboardMsg model.clipboardState
+                (newClipboardState, clipboardCmd) = ClipboardButton.updateClipboardState
+                    notebookId
+                    clipboardMsg
+                    model.clipboardState
             in
                 ( { model | clipboardState = newClipboardState }
                 , Cmd.map ClipboardMsgContainer clipboardCmd
@@ -261,10 +264,10 @@ updateNotebookOnline msg model notebookId notes =
             in
             ( { model
                 | app =
-                    NotebookOpen notebookId
+                    NotebookOnline notebookId
                         (Dict.update noteId updateInDict notes)
               }
-            , Note.patchNote model.randomSeed (NoteUpdated newNote) notebookId newNote
+            , Note.upsertNote (NoteUpdated newNote) notebookId newNote
             )
 
         AddNote ->
@@ -278,7 +281,7 @@ updateNotebookOnline msg model notebookId notes =
 
                 newApp : App
                 newApp =
-                    NotebookOpen notebookId (Dict.insert noteId newNote notes)
+                    NotebookOnline notebookId (Dict.insert noteId newNote notes)
             in
             ( { model | randomSeed = newSeed, app = newApp }
             , Note.insertNewNote newNote NoteStored notebookId
@@ -288,38 +291,59 @@ updateNotebookOnline msg model notebookId notes =
             case result of
                 Ok storedNote ->
                     ( { model
-                        | app = NotebookOpen notebookId (updateNoteToStored storedNote notes)
+                        | app = NotebookOnline notebookId (updateNoteToStored storedNote notes)
                       }
                     , Cmd.none
                     )
 
                 Err _ ->
-                    ( model, Cmd.none )
-
-        NoteUpdated oldNote result ->
-            case result of
-                Ok ( newNote, newSeed ) ->
-                    ( { model | randomSeed = newSeed }
+                    ( { model
+                        | app = NotebookOffline notebookId notes
+                      }
                     , Cmd.none
                     )
 
+        NoteUpdated oldNote result ->
+            case result of
+                Ok newNote ->
+                    let
+                        noteId : String
+                        noteId =
+                            Note.noteIdString newNote
+                        
+                        updateInDict : Maybe Note -> Maybe Note
+                        updateInDict =
+                            Maybe.map (\_ -> newNote)
+                    in
+                        ( { model
+                            | app = NotebookOnline notebookId (Dict.update noteId updateInDict notes)
+                        }
+                        , Cmd.none
+                        )
+
                 Err _ ->
-                    ( model, Cmd.none )
+                    ( { model
+                        | app = NotebookOffline notebookId notes
+                      }
+                    , Cmd.none
+                    )
 
         DeleteNote note ->
-            ( model
+            ( { model | app = NotebookOnline notebookId (Dict.remove (Note.noteIdString note) notes) }
             , Note.deleteNote (NoteDeleted note) notebookId note
             )
 
         NoteDeleted note result ->
             case result of
                 Ok () ->
-                    ( { model | app = NotebookOpen notebookId (Dict.remove (Note.noteIdString note) notes) }
-                    , Cmd.none
-                    )
+                    ( model, Cmd.none )
 
                 Err _ ->
-                    ( model, Cmd.none )
+                    ( { model
+                        | app = NotebookOffline notebookId notes
+                      }
+                    , Cmd.none
+                    )
 
 {-| Updates the notebook to reflect the notebook is open.
 Updates the location and tries to store the notebook.
