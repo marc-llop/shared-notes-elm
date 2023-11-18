@@ -74,13 +74,13 @@ init { path, randomSeed } =
         newNotebook : ( App, Cmd Msg )
         newNotebook =
             ( OpeningNotebook
-            , Identifiers.fetchTwoWords WordsFetched
+            , Identifiers.fetchTwoWords (Initializing << WordsFetched)
             )
 
         existingNotebook : NotebookId -> ( App, Cmd Msg )
         existingNotebook notebookId =
             ( OpeningNotebook
-            , Notebook.checkNotebookExists NotebookChecked notebookId
+            , Notebook.checkNotebookExists (Initializing << NotebookChecked) notebookId
             )
 
         newApp : ( App, Cmd Msg )
@@ -111,16 +111,23 @@ main =
     Browser.element
         { init = init
         , update = update
-        , view = \model -> view model |> Html.Styled.toUnstyled
+        , view = \model -> view model
+            |> Html.Styled.map Initialized
+            |> Html.Styled.toUnstyled
         , subscriptions = \_ -> Sub.none
         }
 
-
-type Msg
+{-| Messages only sent during application initialization.
+-}
+type InitializationMsg
     = NotebookChecked (Result Http.Error NotebookId)
-    | WordsFetched (Result Http.Error ( String, String )) 
+    | WordsFetched (Result Http.Error ( String, String ))
     | NotebookFetched NotebookId (Result Http.Error ( List Note, Random.Seed ))
-    | NotebookStored (Result Http.Error NotebookId)
+
+{-| Messages only sent after the application has been initialized and it is interactive.
+-}
+type AppMsg
+    = NotebookStored (Result Http.Error NotebookId)
     | ClipboardMsgContainer ClipboardMsg
     | WriteNote Note String
     | AddNote
@@ -129,30 +136,48 @@ type Msg
     | DeleteNote Note
     | NoteDeleted Note (Result Time.Posix ())
 
+type Msg
+    = Initializing InitializationMsg
+    | Initialized AppMsg
+
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    case model.app of
-        OpeningNotebook ->
-            updateOpeningNotebook msg model
+    case msg of
+        Initializing initMsg ->
+            case model.app of
+                OpeningNotebook -> updateOpeningNotebook initMsg model
 
-        NotebookNotStored notebookId notes ->
-            updateNotebookNotStored msg model notebookId notes
+                NotebookNotStored _ _ -> ( model, Cmd.none )
 
-        NotebookOnline notebookId notes ->
-            updateNotebookOnline msg model notebookId notes
+                NotebookOnline _ _ -> ( model, Cmd.none )
 
-        NotebookOffline notebookId notes deletedNotes ->
-            updateNotebookOffline msg model notebookId notes deletedNotes
+                NotebookOffline _ _ _ -> ( model, Cmd.none )
+
+        Initialized appMsg ->
+            case model.app of
+                OpeningNotebook -> ( model, Cmd.none )
+
+                NotebookNotStored notebookId notes ->
+                    updateNotebookNotStored appMsg model notebookId notes
+                        |> Tuple.mapSecond (Cmd.map Initialized)
+
+                NotebookOnline notebookId notes ->
+                    updateNotebookOnline appMsg model notebookId notes
+                        |> Tuple.mapSecond (Cmd.map Initialized)
+
+                NotebookOffline notebookId notes deletedNotes ->
+                    updateNotebookOffline appMsg model notebookId notes deletedNotes
+                        |> Tuple.mapSecond (Cmd.map Initialized)
 
 
-updateOpeningNotebook : Msg -> Model -> ( Model, Cmd Msg )
+updateOpeningNotebook : InitializationMsg -> Model -> ( Model, Cmd Msg )
 updateOpeningNotebook msg model =
     case msg of
         NotebookChecked result ->
             let
                 networkOkButNotebookNotFound : ( Model, Cmd Msg )
-                networkOkButNotebookNotFound = ( model, Identifiers.fetchTwoWords WordsFetched )
+                networkOkButNotebookNotFound = ( model, Identifiers.fetchTwoWords (Initializing << WordsFetched) )
 
                 networkFailed : ( Model, Cmd Msg )
                 networkFailed = fullyRandomNotebookId model.randomSeed
@@ -161,7 +186,7 @@ updateOpeningNotebook msg model =
                 case result of
                     Ok notebookId ->
                         ( model
-                        , Notebook.getNotebookNotes model.randomSeed (NotebookFetched notebookId) notebookId
+                        , Notebook.getNotebookNotes model.randomSeed (Initializing << (NotebookFetched notebookId)) notebookId
                         )
 
                     Err (Http.BadStatus status) ->
@@ -191,7 +216,7 @@ updateOpeningNotebook msg model =
                     ( { model
                         | app = NotebookOnline notebookId (dictFromNotes notes)
                         , randomSeed = newSeed
-                      }
+                    }
                     , Cmd.none
                     )
 
@@ -200,42 +225,10 @@ updateOpeningNotebook msg model =
                     , Cmd.none
                     )
 
-        NotebookStored _ ->
-            ( model, Cmd.none )
 
-        ClipboardMsgContainer _ ->
-            ( model, Cmd.none )
-
-        WriteNote _ _ ->
-            ( model, Cmd.none )
-
-        AddNote ->
-            ( model, Cmd.none )
-
-        NoteStored _ ->
-            ( model, Cmd.none )
-
-        NoteUpdated _ _ ->
-            ( model, Cmd.none )
-
-        DeleteNote _ ->
-            ( model, Cmd.none )
-
-        NoteDeleted _ _ ->
-            ( model, Cmd.none )
-
-updateNotebookNotStored : Msg -> Model -> NotebookId -> Notes -> ( Model, Cmd Msg )
+updateNotebookNotStored : AppMsg -> Model -> NotebookId -> Notes -> ( Model, Cmd AppMsg )
 updateNotebookNotStored msg model notebookId notes =
     case msg of
-        NotebookChecked _ ->
-            ( model, Cmd.none )
-
-        WordsFetched _ ->
-            ( model, Cmd.none )
-
-        NotebookFetched _ _ ->
-            ( model, Cmd.none )
-
         NotebookStored result ->
             case result of
                 Ok _ -> ( {model | app = NotebookOffline notebookId notes []}, syncNotes )
@@ -248,18 +241,9 @@ updateNotebookNotStored msg model notebookId notes =
         _ ->
             Debug.todo "Complete updateNotebookNotStored"
 
-updateNotebookOnline : Msg -> Model -> NotebookId -> Notes -> ( Model, Cmd Msg )
+updateNotebookOnline : AppMsg -> Model -> NotebookId -> Notes -> ( Model, Cmd AppMsg )
 updateNotebookOnline msg model notebookId notes =
     case msg of
-        NotebookChecked _ ->
-            ( model, Cmd.none )
-
-        WordsFetched _ ->
-            ( model, Cmd.none )
-
-        NotebookFetched _ _ ->
-            ( model, Cmd.none )
-
         NotebookStored result ->
             ( model, Cmd.none )
 
@@ -282,7 +266,7 @@ updateNotebookOnline msg model notebookId notes =
                 | app =
                     NotebookOnline notebookId
                         (Dict.update noteId updateInDict notes)
-              }
+            }
             , Note.upsertNote (NoteUpdated newNote) notebookId newNote
             )
 
@@ -308,14 +292,14 @@ updateNotebookOnline msg model notebookId notes =
                 Ok storedNote ->
                     ( { model
                         | app = NotebookOnline notebookId (updateNoteToStored storedNote notes)
-                      }
+                    }
                     , Cmd.none
                     )
 
                 Err _ ->
                     ( { model
                         | app = NotebookOffline notebookId notes []
-                      }
+                    }
                     , Cmd.none
                     )
 
@@ -340,7 +324,7 @@ updateNotebookOnline msg model notebookId notes =
                 Err _ ->
                     ( { model
                         | app = NotebookOffline notebookId notes []
-                      }
+                    }
                     , Cmd.none
                     )
 
@@ -357,17 +341,17 @@ updateNotebookOnline msg model notebookId notes =
                 Err timestamp ->
                     ( { model
                         | app = NotebookOffline notebookId notes [(timestamp, note)]
-                      }
+                    }
                     , Cmd.none
                     )
 
 
 
-updateNotebookOffline : Msg -> Model -> NotebookId -> Notes -> DeletedNotes -> ( Model, Cmd Msg )
+updateNotebookOffline : AppMsg -> Model -> NotebookId -> Notes -> DeletedNotes -> ( Model, Cmd AppMsg )
 updateNotebookOffline msg model notebookId notes deletedNotes =
     Debug.todo "Complete updateNotebookOffline"
 
-delegateToClipboardButton : NotebookId -> ClipboardMsg -> Model -> ( Model, Cmd Msg )
+delegateToClipboardButton : NotebookId -> ClipboardMsg -> Model -> ( Model, Cmd AppMsg )
 delegateToClipboardButton notebookId clipboardMsg model =
     let
         (newClipboardState, clipboardCmd) = ClipboardButton.updateClipboardState
@@ -390,7 +374,7 @@ openNewNotebookOnline (newSeed, notebookId) =
       }
     , Cmd.batch
         [ updateLocation (Identifiers.notebookIdToString notebookId)
-        , insertNotebook NotebookStored notebookId
+        , insertNotebook (Initialized << NotebookStored) notebookId
         ]
     )
 
@@ -430,7 +414,7 @@ fullyRandomNotebookId seed =
     in
         randomNotebookIdWithWords (a, b) seed2
 
-syncNotes : Cmd Msg
+syncNotes : Cmd AppMsg
 syncNotes = todo "Download up-to-date notes, replace updated notes, duplicate conflicts, delete notes deleted locally, and store new notes and conflicts"
 
 updateNoteToStored : Note -> Dict String Note -> Dict String Note
@@ -463,7 +447,7 @@ buttonRow =
 
 {-| Displays the NotebookId along with a copy-to-clipboard button.
 -}
-notebookIdView : NotebookId -> ClipboardState -> Html Msg
+notebookIdView : NotebookId -> ClipboardState -> Html AppMsg
 notebookIdView notebookId state =
     let
         idString : String
@@ -475,10 +459,10 @@ notebookIdView notebookId state =
                 |> Html.Styled.map ClipboardMsgContainer
             ]
 
-notebookView : NotebookId -> Notes -> ClipboardState -> Html Msg
+notebookView : NotebookId -> Notes -> ClipboardState -> Html AppMsg
 notebookView notebookId notes clipboardState =
     let
-        notesList : List ( String, Html Msg )
+        notesList : List ( String, Html AppMsg )
         notesList =
             Dict.toList notes
                 |> List.map Tuple.second
@@ -489,7 +473,7 @@ notebookView notebookId notes clipboardState =
                     , onDelete = DeleteNote
                     })
 
-        addNoteButton : Html Msg
+        addNoteButton : Html AppMsg
         addNoteButton = buttonView
             { icon = Icons.plus
             , onClick = AddNote
@@ -506,10 +490,10 @@ notebookView notebookId notes clipboardState =
         ]
 
 
-view : Model -> Html Msg
+view : Model -> Html AppMsg
 view model =
     let
-        notebook : Html Msg
+        notebook : Html AppMsg
         notebook =
             case model.app of
                 OpeningNotebook ->
