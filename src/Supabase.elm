@@ -1,6 +1,8 @@
-module Supabase exposing (getSupabase, patchSupabase, postSupabase, deleteSupabase, singletonDecoder, upsertSupabase)
+module Supabase exposing (getSupabase, patchSupabase, postSupabase, deleteSupabaseTask, singletonDecoder, upsertSupabase)
 
-import Http exposing (emptyBody, expectJson, header, jsonBody, request)
+import Http exposing (emptyBody, expectJson, header, jsonBody, request, task)
+import Http.Tasks as HttpTasks
+import Task exposing (Task)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode exposing (Value)
 
@@ -158,20 +160,18 @@ patchSupabase { path, body, decoder, toMsg } =
         }
 
 -}
-deleteSupabase :
+deleteSupabaseTask :
     { path : String
-    , toMsg : Result Http.Error () -> msg
     }
-    -> Cmd msg
-deleteSupabase { path, toMsg } =
-    request
+    -> Task Http.Error ()
+deleteSupabaseTask { path } =
+    task
         { method = "DELETE"
         , headers = headers
         , url = endpoint path
         , body = emptyBody
-        , expect = Http.expectWhatever toMsg
+        , resolver = HttpTasks.resolveWhatever
         , timeout = Nothing
-        , tracker = Nothing
         }
 
 maybeToDecoder : String -> Maybe a -> Decoder a

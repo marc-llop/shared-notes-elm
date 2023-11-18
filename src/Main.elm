@@ -15,6 +15,8 @@ import Notebook exposing (insertNotebook)
 import Random
 import Spinner exposing (spinner)
 import ClipboardButton exposing (ClipboardState, ClipboardMsg)
+import Time
+import Task
 import Debug exposing (todo)
 
 port updateLocation : String -> Cmd msg
@@ -22,6 +24,8 @@ port updateLocation : String -> Cmd msg
 
 type alias Notes =
     Dict String Note
+
+type alias DeletedNotes = List (Time.Posix, Note)
 
 {-| The application can be in different states regarding its connection status:
 
@@ -37,7 +41,7 @@ type App
     = OpeningNotebook
     | NotebookNotStored NotebookId Notes
     | NotebookOnline NotebookId Notes
-    | NotebookOffline NotebookId Notes
+    | NotebookOffline NotebookId Notes DeletedNotes
 
 type alias Model =
     { randomSeed : Random.Seed
@@ -123,7 +127,7 @@ type Msg
     | NoteStored (Result Http.Error Note)
     | NoteUpdated Note (Result Http.Error Note)
     | DeleteNote Note
-    | NoteDeleted Note (Result Http.Error ())
+    | NoteDeleted Note (Result Time.Posix ())
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -138,8 +142,8 @@ update msg model =
         NotebookOnline notebookId notes ->
             updateNotebookOnline msg model notebookId notes
 
-        NotebookOffline notebookId notes ->
-            updateNotebookOffline msg model notebookId notes
+        NotebookOffline notebookId notes deletedNotes ->
+            updateNotebookOffline msg model notebookId notes deletedNotes
 
 
 updateOpeningNotebook : Msg -> Model -> ( Model, Cmd Msg )
@@ -192,7 +196,7 @@ updateOpeningNotebook msg model =
                     )
 
                 Err _ ->
-                    ( { model | app = NotebookOffline notebookId Dict.empty }
+                    ( { model | app = NotebookOffline notebookId Dict.empty [] }
                     , Cmd.none
                     )
 
@@ -220,6 +224,29 @@ updateOpeningNotebook msg model =
         NoteDeleted _ _ ->
             ( model, Cmd.none )
 
+updateNotebookNotStored : Msg -> Model -> NotebookId -> Notes -> ( Model, Cmd Msg )
+updateNotebookNotStored msg model notebookId notes =
+    case msg of
+        NotebookChecked _ ->
+            ( model, Cmd.none )
+
+        WordsFetched _ ->
+            ( model, Cmd.none )
+
+        NotebookFetched _ _ ->
+            ( model, Cmd.none )
+
+        NotebookStored result ->
+            case result of
+                Ok _ -> ( {model | app = NotebookOffline notebookId notes []}, syncNotes )
+
+                Err _ -> ( {model | app = NotebookNotStored notebookId notes}, Cmd.none )
+
+        ClipboardMsgContainer clipboardMsg ->
+            delegateToClipboardButton notebookId clipboardMsg model
+
+        _ ->
+            Debug.todo "Complete updateNotebookNotStored"
 
 updateNotebookOnline : Msg -> Model -> NotebookId -> Notes -> ( Model, Cmd Msg )
 updateNotebookOnline msg model notebookId notes =
@@ -234,21 +261,10 @@ updateNotebookOnline msg model notebookId notes =
             ( model, Cmd.none )
 
         NotebookStored result ->
-            case result of
-                Ok _ -> ( {model | app = NotebookOffline notebookId notes}, syncNotes )
-
-                Err _ -> ( {model | app = NotebookNotStored notebookId notes}, Cmd.none )
+            ( model, Cmd.none )
 
         ClipboardMsgContainer clipboardMsg ->
-            let
-                (newClipboardState, clipboardCmd) = ClipboardButton.updateClipboardState
-                    notebookId
-                    clipboardMsg
-                    model.clipboardState
-            in
-                ( { model | clipboardState = newClipboardState }
-                , Cmd.map ClipboardMsgContainer clipboardCmd
-                )
+            delegateToClipboardButton notebookId clipboardMsg model
 
         WriteNote note value ->
             let
@@ -298,7 +314,7 @@ updateNotebookOnline msg model notebookId notes =
 
                 Err _ ->
                     ( { model
-                        | app = NotebookOffline notebookId notes
+                        | app = NotebookOffline notebookId notes []
                       }
                     , Cmd.none
                     )
@@ -323,7 +339,7 @@ updateNotebookOnline msg model notebookId notes =
 
                 Err _ ->
                     ( { model
-                        | app = NotebookOffline notebookId notes
+                        | app = NotebookOffline notebookId notes []
                       }
                     , Cmd.none
                     )
@@ -338,12 +354,30 @@ updateNotebookOnline msg model notebookId notes =
                 Ok () ->
                     ( model, Cmd.none )
 
-                Err _ ->
+                Err timestamp ->
                     ( { model
-                        | app = NotebookOffline notebookId notes
+                        | app = NotebookOffline notebookId notes [(timestamp, note)]
                       }
                     , Cmd.none
                     )
+
+
+
+updateNotebookOffline : Msg -> Model -> NotebookId -> Notes -> DeletedNotes -> ( Model, Cmd Msg )
+updateNotebookOffline msg model notebookId notes deletedNotes =
+    Debug.todo "Complete updateNotebookOffline"
+
+delegateToClipboardButton : NotebookId -> ClipboardMsg -> Model -> ( Model, Cmd Msg )
+delegateToClipboardButton notebookId clipboardMsg model =
+    let
+        (newClipboardState, clipboardCmd) = ClipboardButton.updateClipboardState
+            notebookId
+            clipboardMsg
+            model.clipboardState
+    in
+        ( { model | clipboardState = newClipboardState }
+        , Cmd.map ClipboardMsgContainer clipboardCmd
+        )
 
 {-| Updates the notebook to reflect the notebook is open.
 Updates the location and tries to store the notebook.
@@ -481,7 +515,13 @@ view model =
                 OpeningNotebook ->
                     spinner
 
-                NotebookOpen notebookId notes ->
+                NotebookNotStored notebookId notes ->
+                    notebookView notebookId notes model.clipboardState
+
+                NotebookOnline notebookId notes ->
+                    notebookView notebookId notes model.clipboardState
+
+                NotebookOffline notebookId notes _ ->
                     notebookView notebookId notes model.clipboardState
     in
     div [ class "screen" ]

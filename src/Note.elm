@@ -20,7 +20,9 @@ import Identifiers exposing (NotebookId, notebookIdToString, wordGenerator)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
 import Random exposing (Seed)
-import Supabase exposing (upsertSupabase, postSupabase, deleteSupabase, singletonDecoder)
+import Supabase exposing (upsertSupabase, postSupabase, deleteSupabaseTask, singletonDecoder)
+import Task exposing (Task)
+import Time
 
 {-| An editable note. Contains some text and internal metadata.
 
@@ -208,17 +210,27 @@ upsertNote toMsg notebookId note =
                 , toMsg = toMsg
                 }
 
-deleteNote : (Result Http.Error () -> msg) -> NotebookId -> Note -> Cmd msg
+{-| Attempts to delete a note in the remote database, unless the note is
+ClientOnly.
+If it fails, returns an Err Time.Posix with the current timestamp.
+-}
+deleteNote : (Result Time.Posix () -> msg) -> NotebookId -> Note -> Cmd msg
 deleteNote toMsg notebookId note =
-    case note of
-        ClientOnly _ _ ->
-            Cmd.none
+    let
+        failWithTime : Task Time.Posix ()
+        failWithTime = Time.now
+            |> Task.andThen (\timestamp -> Task.fail timestamp)
+    in
+        case note of
+            ClientOnly _ _ ->
+                Cmd.none
 
-        Stored serverId _ _ ->
-            deleteSupabase
-                { path = noteEndpoint notebookId serverId
-                , toMsg = toMsg
-                }
+            Stored serverId _ _ ->
+                deleteSupabaseTask
+                    { path = noteEndpoint notebookId serverId
+                    }
+                    |> Task.onError (\_ -> failWithTime)
+                    |> Task.attempt toMsg
 
 {-| Provides the Note as an (ID, Note) tuple for indexing purposes (for
 example, a Dictionary).
