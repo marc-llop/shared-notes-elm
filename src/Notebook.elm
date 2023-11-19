@@ -4,7 +4,6 @@ import Identifiers exposing (NotebookId, notebookIdToString, parseNotebookId)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
 import Note exposing (Note, storedNotesDecoder)
-import Random exposing (Seed)
 import Supabase exposing (CallError, getSupabase, postSupabase, singletonDecoder)
 
 
@@ -77,12 +76,12 @@ checkNotebookExists toMsg notebookId =
         }
 
 
-notebookNotesDecoder : Seed -> Decoder ( List Note, Seed )
-notebookNotesDecoder seed =
-    singletonDecoder (Decode.field "notes" (storedNotesDecoder seed))
+notebookNotesDecoder : Int -> Decoder ( List Note, Int )
+notebookNotesDecoder smallestAvailableId =
+    singletonDecoder (Decode.field "notes" (storedNotesDecoder smallestAvailableId))
 
 
-getNotebookNotes : Seed -> (Result CallError ( List Note, Seed ) -> msg) -> NotebookId -> Cmd msg
+getNotebookNotes : Int -> (Result CallError ( List Note, Int ) -> msg) -> NotebookId -> Cmd msg
 getNotebookNotes seed toMsg notebookId =
     getSupabase
         { path = endpoint ++ "?id=eq." ++ notebookIdToString notebookId ++ "&select=notes(*)"

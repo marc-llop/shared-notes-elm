@@ -38,12 +38,17 @@ type Model
 
 
 type alias LoadedModel =
-    { randomSeed : Random.Seed
+    { smallestAvailableId : Int
     , connectionStatus : ConnectionStatus
     , notebookId : NotebookId
     , notes : Notes
     , clipboardState : ClipboardState
     }
+
+
+initialClientId : Int
+initialClientId =
+    0
 
 
 {-| The notes contained in the current open Notebook.
@@ -136,7 +141,7 @@ init { path, randomSeed } =
 type InitializationMsg
     = NotebookChecked (Result CallError NotebookId)
     | WordsFetched (Result Http.Error ( String, String ))
-    | NotebookFetched NotebookId (Result CallError ( List Note, Random.Seed ))
+    | NotebookFetched NotebookId (Result CallError ( List Note, Int ))
 
 
 {-| Messages only sent after the application has been initialized and it is interactive.
@@ -203,12 +208,13 @@ updateOpeningNotebook randomSeed msg model =
                 networkFailed : ( Model, Cmd Msg )
                 networkFailed =
                     fullyRandomNotebookId randomSeed
+                        |> Tuple.second
                         |> openNewNotebookOffline
             in
             case result of
                 Ok notebookId ->
                     ( model
-                    , Notebook.getNotebookNotes randomSeed (Initializing << NotebookFetched notebookId) notebookId
+                    , Notebook.getNotebookNotes initialClientId (Initializing << NotebookFetched notebookId) notebookId
                     )
 
                 Err DataError ->
@@ -221,15 +227,17 @@ updateOpeningNotebook randomSeed msg model =
             case result of
                 Ok ( a, b ) ->
                     randomNotebookIdWithWords ( a, b ) randomSeed
+                        |> Tuple.second
                         |> openNewNotebookOnline
 
                 Err _ ->
                     fullyRandomNotebookId randomSeed
+                        |> Tuple.second
                         |> openNewNotebookOnline
 
         NotebookFetched notebookId result ->
             case result of
-                Ok ( notes, newSeed ) ->
+                Ok ( notes, newSmallestAvailableId ) ->
                     let
                         dictFromNotes : List Note -> Notes
                         dictFromNotes noteList =
@@ -238,7 +246,7 @@ updateOpeningNotebook randomSeed msg model =
                                 |> Dict.fromList
                     in
                     ( OpenNotebook
-                        { randomSeed = newSeed
+                        { smallestAvailableId = newSmallestAvailableId
                         , connectionStatus = NotebookOnline
                         , notebookId = notebookId
                         , notes = dictFromNotes notes
@@ -249,7 +257,7 @@ updateOpeningNotebook randomSeed msg model =
 
                 Err _ ->
                     ( OpenNotebook
-                        { randomSeed = randomSeed
+                        { smallestAvailableId = initialClientId
                         , connectionStatus = NotebookOffline []
                         , notebookId = notebookId
                         , notes = Dict.empty
@@ -298,14 +306,14 @@ updateNotebookOnline msg ({ notebookId, notes } as model) =
 
         AddNote ->
             let
-                ( newNote, newSeed ) =
-                    Note.newNote model.randomSeed
+                ( newNote, newSmallestAvailableId ) =
+                    Note.newNote model.smallestAvailableId
 
                 noteId : String
                 noteId =
                     Note.noteIdString newNote
             in
-            ( { model | randomSeed = newSeed, notes = Dict.insert noteId newNote notes }
+            ( { model | smallestAvailableId = newSmallestAvailableId, notes = Dict.insert noteId newNote notes }
             , Note.insertNewNote newNote NoteStored notebookId
             )
 
@@ -385,10 +393,10 @@ delegateToClipboardButton clipboardMsg ({ notebookId, clipboardState } as model)
 {-| Updates the notebook to reflect the notebook is open.
 Updates the location and tries to store the notebook.
 -}
-openNewNotebookOnline : ( Random.Seed, NotebookId ) -> ( Model, Cmd Msg )
-openNewNotebookOnline ( newSeed, notebookId ) =
+openNewNotebookOnline : NotebookId -> ( Model, Cmd Msg )
+openNewNotebookOnline notebookId =
     ( OpenNotebook
-        { randomSeed = newSeed
+        { smallestAvailableId = initialClientId
         , connectionStatus = NotebookNotStored
         , notebookId = notebookId
         , notes = Dict.empty
@@ -404,10 +412,10 @@ openNewNotebookOnline ( newSeed, notebookId ) =
 {-| Updates the model to reflect the notebook is open.
 Does not update the URL, does not try to store the notebook.
 -}
-openNewNotebookOffline : ( Random.Seed, NotebookId ) -> ( Model, Cmd Msg )
-openNewNotebookOffline ( newSeed, notebookId ) =
+openNewNotebookOffline : NotebookId -> ( Model, Cmd Msg )
+openNewNotebookOffline notebookId =
     ( OpenNotebook
-        { randomSeed = newSeed
+        { smallestAvailableId = initialClientId
         , connectionStatus = NotebookNotStored
         , notebookId = notebookId
         , notes = Dict.empty

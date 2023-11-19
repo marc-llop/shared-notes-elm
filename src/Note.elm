@@ -18,7 +18,6 @@ import Html.Styled exposing (Html)
 import Identifiers exposing (NotebookId, notebookIdToString, wordGenerator)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
-import Random exposing (Seed)
 import Supabase exposing (CallError, deleteSupabaseTask, postSupabase, singletonDecoder, upsertSupabase)
 import Task exposing (Task)
 import Time
@@ -84,26 +83,21 @@ noteIdString note =
             clientId
 
 
-
--- TODO: Make ClientId unique via an auto-increment.
-
-
-newClientId : Seed -> ( ClientId, Seed )
-newClientId seed =
-    Random.step wordGenerator seed
-        |> Tuple.mapFirst (\noteId -> "clientId-" ++ noteId)
+newClientId : Int -> ( ClientId, Int )
+newClientId smallestAvailableId =
+    ( "clientId-" ++ String.fromInt smallestAvailableId, smallestAvailableId + 1 )
 
 
 {-| A new Note with a generated ClientId.
 -}
-newNote : Seed -> ( Note, Seed )
-newNote seed =
+newNote : Int -> ( Note, Int )
+newNote smallestAvailableId =
     let
         newNoteWithId : ClientId -> Note
         newNoteWithId noteId =
             ClientOnly noteId ""
     in
-    newClientId seed
+    newClientId smallestAvailableId
         |> Tuple.mapFirst newNoteWithId
 
 
@@ -154,10 +148,10 @@ notesDecoder =
     Decode.list noteDecoder
 
 
-storedNotesDecoder : Seed -> Decoder ( List Note, Seed )
-storedNotesDecoder seed =
+storedNotesDecoder : Int -> Decoder ( List Note, Int )
+storedNotesDecoder smallestAvailableId =
     notesDecoder
-        |> Decode.map (initializeIds seed)
+        |> Decode.map (initializeIds smallestAvailableId)
 
 
 {-| Decodes only the first note in a list. Used in the cases we know Supabase
@@ -178,12 +172,12 @@ noteEndpoint notebookId serverId =
     notesEndpoint ++ "?id=eq." ++ String.fromInt serverId ++ "&notebook_id=eq." ++ notebookIdToString notebookId
 
 
-insertNotes : Seed -> (Result CallError ( List Note, Seed ) -> msg) -> NotebookId -> List Note -> Cmd msg
-insertNotes seed toMsg notebookId notes =
+insertNotes : Int -> (Result CallError ( List Note, Int ) -> msg) -> NotebookId -> List Note -> Cmd msg
+insertNotes smallestAvailableId toMsg notebookId notes =
     postSupabase
         { path = notesEndpoint
         , body = encodeNoteList notebookId notes
-        , decoder = storedNotesDecoder seed
+        , decoder = storedNotesDecoder smallestAvailableId
         , toMsg = toMsg
         }
 
@@ -327,9 +321,9 @@ noteView { note, onInput, onDelete } =
 
 {-| Creates a Note from its downloaded data by generating a new ClientId.
 -}
-newStoredNote : Seed -> ( ServerId, String ) -> ( Note, Seed )
-newStoredNote seed ( serverId, content ) =
-    newClientId seed
+newStoredNote : Int -> ( ServerId, String ) -> ( Note, Int )
+newStoredNote smallestAvailableId ( serverId, content ) =
+    newClientId smallestAvailableId
         |> Tuple.mapFirst
             (\clientId -> Stored serverId clientId content)
 
@@ -344,18 +338,18 @@ storedNoteFromClientNote clientId ( serverId, content ) =
 {-| Creates several Notes from their downloaded data by generating new
 ClientIds.
 -}
-initializeIds : Seed -> List ( ServerId, String ) -> ( List Note, Seed )
-initializeIds seed list =
+initializeIds : Int -> List ( ServerId, String ) -> ( List Note, Int )
+initializeIds smallestAvailableId list =
     case list of
         [] ->
-            ( [], seed )
+            ( [], smallestAvailableId )
 
         x :: rest ->
             let
-                ( note, newSeed ) =
-                    newStoredNote seed x
+                ( note, nextSmallestAvailableId ) =
+                    newStoredNote smallestAvailableId x
 
-                ( restOfNotes, finalSeed ) =
-                    initializeIds newSeed rest
+                ( restOfNotes, finalSmallestAvailableId ) =
+                    initializeIds nextSmallestAvailableId rest
             in
-            ( note :: restOfNotes, finalSeed )
+            ( note :: restOfNotes, finalSmallestAvailableId )
