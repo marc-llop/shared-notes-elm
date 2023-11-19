@@ -273,7 +273,7 @@ updateNotebookNotStored msg model =
         NotebookStored result ->
             case result of
                 Ok _ ->
-                    ( { model | connectionStatus = NotebookOffline [] }, syncNotes )
+                    ( { model | connectionStatus = NotebookOffline [] }, syncNotes () )
 
                 Err _ ->
                     ( { model | connectionStatus = NotebookNotStored }, Cmd.none )
@@ -451,8 +451,8 @@ fullyRandomNotebookId seed =
     randomNotebookIdWithWords ( a, b ) seed2
 
 
-syncNotes : Cmd AppMsg
-syncNotes =
+syncNotes : () -> Cmd AppMsg
+syncNotes () =
     todo "Download up-to-date notes, replace updated notes, duplicate conflicts, delete notes deleted locally, and store new notes and conflicts"
 
 
