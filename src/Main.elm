@@ -21,10 +21,12 @@ import Debug exposing (todo)
 port updateLocation : String -> Cmd msg
 
 
-type alias Notes =
-    Dict String Note
+type alias Model =
+    { randomSeed : Random.Seed
+    , app : App
+    , clipboardState : ClipboardState
+    }
 
-type alias DeletedNotes = List (Time.Posix, Note)
 
 {-| The application can be in different states regarding its connection status:
 
@@ -42,11 +44,19 @@ type App
     | NotebookOnline NotebookId Notes
     | NotebookOffline NotebookId Notes DeletedNotes
 
-type alias Model =
-    { randomSeed : Random.Seed
-    , app : App
-    , clipboardState : ClipboardState
-    }
+{-| The notes contained in the current open Notebook.
+-}
+type alias Notes =
+    Dict String Note
+
+{-| A list of deleted notes, pending to be deleted from the remote database
+too.
+Each note is kept with the timestamp of its deletion.
+-}
+type alias DeletedNotes = List (Time.Posix, Note)
+
+
+----- INIT -----
 
 {-| Upon starting, the application receives from JS the following data:
 
@@ -97,16 +107,7 @@ init { path, randomSeed } =
     )
 
 
-main : Program Flags Model Msg
-main =
-    Browser.element
-        { init = init
-        , update = update
-        , view = \model -> view model
-            |> Html.Styled.map Initialized
-            |> Html.Styled.toUnstyled
-        , subscriptions = \_ -> Sub.none
-        }
+----- UPDATE -----
 
 {-| Messages only sent during application initialization.
 -}
@@ -427,6 +428,8 @@ updateNoteToStored note notes =
     Dict.update (noteIdString note) updateNote notes
 
 
+----- VIEW -----
+
 {-| Displays a row of icon-buttons for information of interest, like the link
 to this project's GitHub.
 -}
@@ -514,3 +517,15 @@ view model =
             , notebook
             ]
         ]
+
+
+main : Program Flags Model Msg
+main =
+    Browser.element
+        { init = init
+        , update = update
+        , view = \model -> view model
+            |> Html.Styled.map Initialized
+            |> Html.Styled.toUnstyled
+        , subscriptions = \_ -> Sub.none
+        }
