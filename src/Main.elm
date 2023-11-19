@@ -16,6 +16,7 @@ import Note exposing (Note, noteIdString, noteToPair, noteView)
 import Notebook exposing (insertNotebook)
 import Random
 import Spinner exposing (spinner)
+import Supabase exposing (CallError(..))
 import Time
 
 
@@ -53,12 +54,16 @@ type alias Notes =
 
 {-| The application can be in different states regarding its connection status:
 
-  - `NotebookNotStored`: A new notebook has been created, but the app hasn't had
-    connection ever since, so the notebook only exists locally.
+  - `NotebookNotStored`: A new notebook has been created, but the app hasn't
+    had connection ever since, so the notebook only exists locally.
   - `NotebookOnline`: The app is in sync with the server.
   - `NotebookOffline`: The connection has been lost, or just recovered. Some
-    reconciliation may need to be done upon recovery. It keeps a record of all the
-    Stored Notes that have been deleted only in the client.
+    reconciliation may need to be done upon recovery. It keeps a record of all
+    the Stored Notes that have been deleted only in the client.
+
+While being in `NotebookOffline`, the application will still attempt to store
+each change by calling the remote database, and whenever a request succeeds,
+the application will resolve all conflicts and go back to `NotebookOnline`.
 
 -}
 type ConnectionStatus
@@ -125,25 +130,24 @@ init { path, randomSeed } =
 
 ----- UPDATE -----
 
--- TODO: Simplify Results in decoders (ServerError | ConnectionError instead of Http.Error)
 
 {-| Messages only sent during application initialization.
 -}
 type InitializationMsg
-    = NotebookChecked (Result Http.Error NotebookId)
+    = NotebookChecked (Result CallError NotebookId)
     | WordsFetched (Result Http.Error ( String, String ))
-    | NotebookFetched NotebookId (Result Http.Error ( List Note, Random.Seed ))
+    | NotebookFetched NotebookId (Result CallError ( List Note, Random.Seed ))
 
 
 {-| Messages only sent after the application has been initialized and it is interactive.
 -}
 type AppMsg
-    = NotebookStored (Result Http.Error NotebookId)
+    = NotebookStored (Result CallError NotebookId)
     | ClipboardMsgContainer ClipboardMsg
     | WriteNote Note String
     | AddNote
-    | NoteStored (Result Http.Error Note)
-    | NoteUpdated Note (Result Http.Error Note)
+    | NoteStored (Result CallError Note)
+    | NoteUpdated Note (Result CallError Note)
     | DeleteNote Note
     | NoteDeleted Note (Result Time.Posix ())
 
@@ -207,17 +211,10 @@ updateOpeningNotebook randomSeed msg model =
                     , Notebook.getNotebookNotes randomSeed (Initializing << NotebookFetched notebookId) notebookId
                     )
 
-                Err (Http.BadStatus status) ->
-                    if status < 500 then
-                        networkOkButNotebookNotFound
-
-                    else
-                        networkFailed
-
-                Err (Http.BadBody _) ->
+                Err DataError ->
                     networkOkButNotebookNotFound
 
-                Err _ ->
+                Err ConnectionError ->
                     networkFailed
 
         WordsFetched result ->

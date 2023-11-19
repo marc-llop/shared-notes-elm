@@ -1,10 +1,47 @@
-module Supabase exposing (getSupabase, patchSupabase, postSupabase, deleteSupabaseTask, singletonDecoder, upsertSupabase)
+module Supabase exposing (CallError(..), deleteSupabaseTask, getSupabase, patchSupabase, postSupabase, singletonDecoder, upsertSupabase)
 
 import Http exposing (emptyBody, expectJson, header, jsonBody, request, task)
 import Http.Tasks as HttpTasks
-import Task exposing (Task)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode exposing (Value)
+import Task exposing (Task)
+
+
+{-| Error type that simplifies Http.Error in two variants of interest:
+
+  - `DataError`: The request reached the server alright, but there is something
+    wrong. Typically, this will be database errors like NotFound,
+    AlreadyExists...
+  - `ConnectionError`: There is no connection, the server didn't respond, or
+    it had an internal crash. Whatever it is, the application can assume it is
+    not currently possible to store the changes and continue in offline mode.
+
+-}
+type CallError
+    = DataError
+    | ConnectionError
+
+
+httpErrorToCallError : Http.Error -> CallError
+httpErrorToCallError httpError =
+    case httpError of
+        Http.BadStatus status ->
+            if status < 500 then
+                DataError
+
+            else
+                ConnectionError
+
+        Http.BadBody _ ->
+            DataError
+
+        _ ->
+            ConnectionError
+
+
+httpResultToCallError : Result Http.Error a -> Result CallError a
+httpResultToCallError =
+    Result.mapError httpErrorToCallError
 
 
 clientKey : String
@@ -45,7 +82,7 @@ PostgREST filters you want applied.
 getSupabase :
     { path : String
     , decoder : Decoder a
-    , toMsg : Result Http.Error a -> msg
+    , toMsg : Result CallError a -> msg
     }
     -> Cmd msg
 getSupabase { path, decoder, toMsg } =
@@ -54,7 +91,7 @@ getSupabase { path, decoder, toMsg } =
         , headers = headers
         , url = endpoint path
         , body = emptyBody
-        , expect = expectJson toMsg decoder
+        , expect = expectJson (httpResultToCallError >> toMsg) decoder
         , timeout = Nothing
         , tracker = Nothing
         }
@@ -74,7 +111,7 @@ postSupabase :
     { path : String
     , body : Value
     , decoder : Decoder a
-    , toMsg : Result Http.Error a -> msg
+    , toMsg : Result CallError a -> msg
     }
     -> Cmd msg
 postSupabase { path, body, decoder, toMsg } =
@@ -83,7 +120,7 @@ postSupabase { path, body, decoder, toMsg } =
         , headers = headers ++ [ header "Prefer" "return=representation" ]
         , url = endpoint path
         , body = jsonBody body
-        , expect = expectJson toMsg decoder
+        , expect = expectJson (httpResultToCallError >> toMsg) decoder
         , timeout = Nothing
         , tracker = Nothing
         }
@@ -105,7 +142,7 @@ upsertSupabase :
     { path : String
     , body : Value
     , decoder : Decoder a
-    , toMsg : Result Http.Error a -> msg
+    , toMsg : Result CallError a -> msg
     }
     -> Cmd msg
 upsertSupabase { path, body, decoder, toMsg } =
@@ -118,7 +155,7 @@ upsertSupabase { path, body, decoder, toMsg } =
                    ]
         , url = endpoint path
         , body = jsonBody body
-        , expect = expectJson toMsg decoder
+        , expect = expectJson (httpResultToCallError >> toMsg) decoder
         , timeout = Nothing
         , tracker = Nothing
         }
@@ -138,7 +175,7 @@ patchSupabase :
     { path : String
     , body : Value
     , decoder : Decoder a
-    , toMsg : Result Http.Error a -> msg
+    , toMsg : Result CallError a -> msg
     }
     -> Cmd msg
 patchSupabase { path, body, decoder, toMsg } =
@@ -147,10 +184,11 @@ patchSupabase { path, body, decoder, toMsg } =
         , headers = headers ++ [ header "Prefer" "return=representation" ]
         , url = endpoint path
         , body = jsonBody body
-        , expect = expectJson toMsg decoder
+        , expect = expectJson (httpResultToCallError >> toMsg) decoder
         , timeout = Nothing
         , tracker = Nothing
         }
+
 
 {-| Deletes all matching rows. You can filter affected rows with path.
 
@@ -163,7 +201,7 @@ patchSupabase { path, body, decoder, toMsg } =
 deleteSupabaseTask :
     { path : String
     }
-    -> Task Http.Error ()
+    -> Task CallError ()
 deleteSupabaseTask { path } =
     task
         { method = "DELETE"
@@ -173,6 +211,8 @@ deleteSupabaseTask { path } =
         , resolver = HttpTasks.resolveWhatever
         , timeout = Nothing
         }
+        |> Task.mapError httpErrorToCallError
+
 
 maybeToDecoder : String -> Maybe a -> Decoder a
 maybeToDecoder err maybeVal =
