@@ -27,22 +27,30 @@ type alias Model =
     , clipboardState : ClipboardState
     }
 
+{-| The application can be in two states regarding its lifecycle:
+
+- `OpeningNotebook`: Initial state. The app doesn't know yet if it's going to 
+open an existing notebook or create a new one. The user can't edit notes.
+- `OpenNotebook`: The application is already interactive and the user can edit
+notes.
+-}
+type App
+    = OpeningNotebook
+    | OpenNotebook ConnectionStatus NotebookId Notes
+
 
 {-| The application can be in different states regarding its connection status:
 
-- `OpeningNotebook`: Initial state. The app doesn't know yet if it's going to 
-open an existing notebook or create a new one.
 - `NotebookNotStored`: A new notebook has been created, but the app hasn't had
 connection ever since, so the notebook only exists locally.
 - `NotebookOnline`: The app is in sync with the server.
 - `NotebookOffline`: The connection has been lost, or just recovered. Some 
 reconciliation may need to be done upon recovery.
 -}
-type App
-    = OpeningNotebook
-    | NotebookNotStored NotebookId Notes
-    | NotebookOnline NotebookId Notes
-    | NotebookOffline NotebookId Notes DeletedNotes
+type ConnectionStatus
+    = NotebookNotStored
+    | NotebookOnline
+    | NotebookOffline DeletedNotes
 
 {-| The notes contained in the current open Notebook.
 -}
@@ -140,27 +148,23 @@ update msg model =
             case model.app of
                 OpeningNotebook -> updateOpeningNotebook initMsg model
 
-                NotebookNotStored _ _ -> ( model, Cmd.none )
-
-                NotebookOnline _ _ -> ( model, Cmd.none )
-
-                NotebookOffline _ _ _ -> ( model, Cmd.none )
+                OpenNotebook _ _ _ -> ( model, Cmd.none )
 
         Initialized appMsg ->
             case model.app of
                 OpeningNotebook -> ( model, Cmd.none )
 
-                NotebookNotStored notebookId notes ->
-                    updateNotebookNotStored appMsg model notebookId notes
-                        |> Tuple.mapSecond (Cmd.map Initialized)
+                OpenNotebook connectionStatus notebookId notes ->
+                    let
+                        updateFunction = case connectionStatus of
+                            NotebookNotStored -> updateNotebookNotStored
 
-                NotebookOnline notebookId notes ->
-                    updateNotebookOnline appMsg model notebookId notes
-                        |> Tuple.mapSecond (Cmd.map Initialized)
+                            NotebookOnline -> updateNotebookOnline
 
-                NotebookOffline notebookId notes deletedNotes ->
-                    updateNotebookOffline appMsg model notebookId notes deletedNotes
-                        |> Tuple.mapSecond (Cmd.map Initialized)
+                            NotebookOffline deletedNotes -> updateNotebookOffline deletedNotes
+                    in
+                        updateFunction appMsg model notebookId notes
+                            |> Tuple.mapSecond (Cmd.map Initialized)
 
 
 updateOpeningNotebook : InitializationMsg -> Model -> ( Model, Cmd Msg )
@@ -213,14 +217,14 @@ updateOpeningNotebook msg model =
                                 |> Dict.fromList
                     in
                         ( { model
-                            | app = NotebookOnline notebookId (dictFromNotes notes)
+                            | app = OpenNotebook NotebookOnline notebookId (dictFromNotes notes)
                             , randomSeed = newSeed
                         }
                         , Cmd.none
                         )
 
                 Err _ ->
-                    ( { model | app = NotebookOffline notebookId Dict.empty [] }
+                    ( { model | app = OpenNotebook (NotebookOffline []) notebookId Dict.empty }
                     , Cmd.none
                     )
 
@@ -230,9 +234,9 @@ updateNotebookNotStored msg model notebookId notes =
     case msg of
         NotebookStored result ->
             case result of
-                Ok _ -> ( {model | app = NotebookOffline notebookId notes []}, syncNotes )
+                Ok _ -> ( {model | app = OpenNotebook (NotebookOffline []) notebookId notes}, syncNotes )
 
-                Err _ -> ( {model | app = NotebookNotStored notebookId notes}, Cmd.none )
+                Err _ -> ( {model | app = OpenNotebook NotebookNotStored notebookId notes}, Cmd.none )
 
         ClipboardMsgContainer clipboardMsg ->
             delegateToClipboardButton notebookId clipboardMsg model
@@ -269,7 +273,7 @@ updateNotebookOnline msg model notebookId notes =
 
                 newApp : App
                 newApp =
-                    NotebookOnline notebookId (Dict.insert noteId newNote notes)
+                    OpenNotebook NotebookOnline notebookId (Dict.insert noteId newNote notes)
             in
             ( { model | randomSeed = newSeed, app = newApp }
             , Note.insertNewNote newNote NoteStored notebookId
@@ -284,7 +288,7 @@ updateNotebookOnline msg model notebookId notes =
 
                 Err _ ->
                     ( { model
-                        | app = NotebookOffline notebookId notes []
+                        | app = OpenNotebook (NotebookOffline []) notebookId notes
                     }
                     , Cmd.none
                     )
@@ -299,13 +303,13 @@ updateNotebookOnline msg model notebookId notes =
 
                 Err _ ->
                     ( { model
-                        | app = NotebookOffline notebookId notes []
+                        | app = OpenNotebook (NotebookOffline []) notebookId notes
                     }
                     , Cmd.none
                     )
 
         DeleteNote note ->
-            ( { model | app = NotebookOnline notebookId (Dict.remove (Note.noteIdString note) notes) }
+            ( { model | app = OpenNotebook NotebookOnline notebookId (Dict.remove (Note.noteIdString note) notes) }
             , Note.deleteNote (NoteDeleted note) notebookId note
             )
 
@@ -316,7 +320,7 @@ updateNotebookOnline msg model notebookId notes =
 
                 Err timestamp ->
                     ( { model
-                        | app = NotebookOffline notebookId notes [(timestamp, note)]
+                        | app = OpenNotebook (NotebookOffline [(timestamp, note)]) notebookId notes
                     }
                     , Cmd.none
                     )
@@ -327,11 +331,11 @@ mapModelNotes fn model =
         newApp = case model.app of
             OpeningNotebook -> OpeningNotebook
 
-            NotebookNotStored notebookId notes -> NotebookNotStored notebookId (fn notes)
+            OpenNotebook NotebookNotStored notebookId notes -> OpenNotebook NotebookNotStored notebookId (fn notes)
 
-            NotebookOnline notebookId notes -> NotebookOnline notebookId (fn notes)
+            OpenNotebook NotebookOnline notebookId notes -> OpenNotebook NotebookOnline notebookId (fn notes)
 
-            NotebookOffline notebookId notes deletedNotes -> NotebookOffline notebookId (fn notes) deletedNotes
+            OpenNotebook (NotebookOffline deletedNotes) notebookId notes  -> OpenNotebook (NotebookOffline deletedNotes) notebookId (fn notes)
     in
         { model | app = newApp }
 
@@ -348,8 +352,8 @@ updateNoteInNotebook newNote notes =
     in
         Dict.update noteId updateInDict notes
 
-updateNotebookOffline : AppMsg -> Model -> NotebookId -> Notes -> DeletedNotes -> ( Model, Cmd AppMsg )
-updateNotebookOffline msg model notebookId notes deletedNotes =
+updateNotebookOffline :  DeletedNotes -> AppMsg -> Model -> NotebookId -> Notes -> ( Model, Cmd AppMsg )
+updateNotebookOffline deletedNotes msg model notebookId notes =
     Debug.todo "Complete updateNotebookOffline"
 
 delegateToClipboardButton : NotebookId -> ClipboardMsg -> Model -> ( Model, Cmd AppMsg )
@@ -370,7 +374,7 @@ Updates the location and tries to store the notebook.
 openNewNotebookOnline : (Random.Seed, NotebookId) -> ( Model, Cmd Msg )
 openNewNotebookOnline (newSeed, notebookId) =
     ( { randomSeed = newSeed
-      , app = NotebookNotStored notebookId Dict.empty
+      , app = OpenNotebook NotebookNotStored notebookId Dict.empty
       , clipboardState = ClipboardButton.initClipboardState
       }
     , Cmd.batch
@@ -385,7 +389,7 @@ Does not update the URL, does not try to store the notebook.
 openNewNotebookOffline : (Random.Seed, NotebookId) -> (Model, Cmd Msg)
 openNewNotebookOffline (newSeed, notebookId) =
     ( { randomSeed = newSeed
-      , app = NotebookNotStored notebookId Dict.empty
+      , app = OpenNotebook NotebookNotStored notebookId Dict.empty
       , clipboardState = ClipboardButton.initClipboardState
       }
     , Cmd.none
@@ -502,13 +506,13 @@ view model =
                 OpeningNotebook ->
                     spinner
 
-                NotebookNotStored notebookId notes ->
+                OpenNotebook NotebookNotStored notebookId notes ->
                     notebookView notebookId notes model.clipboardState
 
-                NotebookOnline notebookId notes ->
+                OpenNotebook NotebookOnline notebookId notes ->
                     notebookView notebookId notes model.clipboardState
 
-                NotebookOffline notebookId notes _ ->
+                OpenNotebook (NotebookOffline _) notebookId notes ->
                     notebookView notebookId notes model.clipboardState
     in
     div [ class "screen" ]
