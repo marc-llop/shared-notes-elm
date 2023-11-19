@@ -16,7 +16,6 @@ import Random
 import Spinner exposing (spinner)
 import ClipboardButton exposing (ClipboardState, ClipboardMsg)
 import Time
-import Task
 import Debug exposing (todo)
 
 port updateLocation : String -> Cmd msg
@@ -48,14 +47,6 @@ type alias Model =
     , app : App
     , clipboardState : ClipboardState
     }
-
-
-dictFromNotes : List Note -> Notes
-dictFromNotes noteList =
-    noteList
-        |> List.map noteToPair
-        |> Dict.fromList
-
 
 {-| Upon starting, the application receives from JS the following data:
 
@@ -213,12 +204,19 @@ updateOpeningNotebook msg model =
         NotebookFetched notebookId result ->
             case result of
                 Ok ( notes, newSeed ) ->
-                    ( { model
-                        | app = NotebookOnline notebookId (dictFromNotes notes)
-                        , randomSeed = newSeed
-                    }
-                    , Cmd.none
-                    )
+                    let
+                        dictFromNotes : List Note -> Notes
+                        dictFromNotes noteList =
+                            noteList
+                                |> List.map noteToPair
+                                |> Dict.fromList
+                    in
+                        ( { model
+                            | app = NotebookOnline notebookId (dictFromNotes notes)
+                            , randomSeed = newSeed
+                        }
+                        , Cmd.none
+                        )
 
                 Err _ ->
                     ( { model | app = NotebookOffline notebookId Dict.empty [] }
@@ -252,21 +250,10 @@ updateNotebookOnline msg model notebookId notes =
 
         WriteNote note value ->
             let
-                noteId : String
-                noteId = Note.noteIdString note
-
                 newNote : Note
                 newNote = Note.updateNoteText value note
-
-                updateInDict : Maybe Note -> Maybe Note
-                updateInDict =
-                    Maybe.map (\_ -> newNote)
             in
-            ( { model
-                | app =
-                    NotebookOnline notebookId
-                        (Dict.update noteId updateInDict notes)
-            }
+            ( mapModelNotes (updateNoteInNotebook newNote) model
             , Note.upsertNote (NoteUpdated newNote) notebookId newNote
             )
 
@@ -290,9 +277,7 @@ updateNotebookOnline msg model notebookId notes =
         NoteStored result ->
             case result of
                 Ok storedNote ->
-                    ( { model
-                        | app = NotebookOnline notebookId (updateNoteToStored storedNote notes)
-                    }
+                    ( mapModelNotes (updateNoteToStored storedNote) model
                     , Cmd.none
                     )
 
@@ -306,20 +291,10 @@ updateNotebookOnline msg model notebookId notes =
         NoteUpdated oldNote result ->
             case result of
                 Ok newNote ->
-                    let
-                        noteId : String
-                        noteId =
-                            Note.noteIdString newNote
-                        
-                        updateInDict : Maybe Note -> Maybe Note
-                        updateInDict =
-                            Maybe.map (\_ -> newNote)
-                    in
-                        ( { model
-                            | app = NotebookOnline notebookId (Dict.update noteId updateInDict notes)
-                        }
-                        , Cmd.none
-                        )
+                    
+                    ( mapModelNotes (updateNoteInNotebook newNote) model
+                    , Cmd.none
+                    )
 
                 Err _ ->
                     ( { model
@@ -345,7 +320,32 @@ updateNotebookOnline msg model notebookId notes =
                     , Cmd.none
                     )
 
+mapModelNotes : (Notes -> Notes) -> Model -> Model
+mapModelNotes fn model =
+    let
+        newApp = case model.app of
+            OpeningNotebook -> OpeningNotebook
 
+            NotebookNotStored notebookId notes -> NotebookNotStored notebookId (fn notes)
+
+            NotebookOnline notebookId notes -> NotebookOnline notebookId (fn notes)
+
+            NotebookOffline notebookId notes deletedNotes -> NotebookOffline notebookId (fn notes) deletedNotes
+    in
+        { model | app = newApp }
+
+updateNoteInNotebook : Note -> Notes -> Notes
+updateNoteInNotebook newNote notes =
+    let
+        noteId : String
+        noteId =
+            Note.noteIdString newNote
+        
+        updateInDict : Maybe Note -> Maybe Note
+        updateInDict =
+            Maybe.map (\_ -> newNote)
+    in
+        Dict.update noteId updateInDict notes
 
 updateNotebookOffline : AppMsg -> Model -> NotebookId -> Notes -> DeletedNotes -> ( Model, Cmd AppMsg )
 updateNotebookOffline msg model notebookId notes deletedNotes =
