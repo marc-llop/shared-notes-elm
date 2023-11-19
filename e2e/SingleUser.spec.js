@@ -101,6 +101,7 @@ test('allows room sharing by URL and copying ID to clipboard', async ({
 
 test('reattempts storing new notes after connection is recovered', async ({
     page,
+    context,
 }) => {
     // TODO intercept calls to localStorage so we are only testing in-memory sync
     // window.addEventListener('storage', () => ...) maybe?
@@ -108,14 +109,14 @@ test('reattempts storing new notes after connection is recovered', async ({
     await mainPage.goTo()
 
     // Add two notes with no connection
-    await page.route(supabaseUrl, route => route.abort())
+    await context.setOffline(true)
     await expect(mainPage.notes).toHaveCount(0)
     await mainPage.addNoteWithContent('one')
     await mainPage.addNoteWithContent('two')
     await expect(mainPage.notes).toHaveCount(2)
 
     // Recover connection and add one note
-    await page.unroute(supabaseUrl)
+    await context.setOffline(false)
     await mainPage.addNoteWithContent('three')
 
     // Reload and check all notes
@@ -130,6 +131,7 @@ test('reattempts storing new notes after connection is recovered', async ({
 
 test('reattempts storing unsaved changes after connection is recovered', async ({
     page,
+    context,
 }) => {
     // TODO intercept calls to localStorage so we are only testing in-memory sync
     const mainPage = new MainPage(page)
@@ -142,13 +144,13 @@ test('reattempts storing unsaved changes after connection is recovered', async (
     await expect(mainPage.notes).toHaveCount(2)
 
     // Edit one note with no connection
-    await page.route(supabaseUrl, route => route.abort())
+    await context.setOffline(true)
     await editNote(mainPage.getNoteWithContent('one'), 'one more')
     await expect(mainPage.getNoteWithContent('one more')).toBeVisible()
     await waitForRequest()
 
     // Recover connection and add one note
-    await page.unroute(supabaseUrl)
+    await context.setOffline(false)
     await mainPage.addNoteWithContent('three')
 
     // Reload and check edited note
@@ -159,7 +161,7 @@ test('reattempts storing unsaved changes after connection is recovered', async (
 })
 
 test('keeps unsaved notes in memory when reloading', async ({ page }) => {
-    // Open a notebook with no connection
+    // Open a notebook with no connection to supabase
     await page.route(supabaseUrl, route => route.abort())
     const mainPage = new MainPage(page)
     await mainPage.goTo()

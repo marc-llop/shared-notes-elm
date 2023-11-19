@@ -125,6 +125,7 @@ init { path, randomSeed } =
 
 ----- UPDATE -----
 
+-- TODO: Simplify Results in decoders (ServerError | ConnectionError instead of Http.Error)
 
 {-| Messages only sent during application initialization.
 -}
