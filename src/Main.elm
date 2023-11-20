@@ -238,33 +238,10 @@ updateOpeningNotebook randomSeed msg model =
         NotebookFetched notebookId result ->
             case result of
                 Ok ( notes, newSmallestAvailableId ) ->
-                    let
-                        dictFromNotes : List Note -> Notes
-                        dictFromNotes noteList =
-                            noteList
-                                |> List.map noteToPair
-                                |> Dict.fromList
-                    in
-                    ( OpenNotebook
-                        { smallestAvailableId = newSmallestAvailableId
-                        , connectionStatus = NotebookOnline
-                        , notebookId = notebookId
-                        , notes = dictFromNotes notes
-                        , clipboardState = ClipboardButton.initClipboardState
-                        }
-                    , Cmd.none
-                    )
+                    openExistingNotebookOnline notes notebookId newSmallestAvailableId
 
                 Err _ ->
-                    ( OpenNotebook
-                        { smallestAvailableId = initialClientId
-                        , connectionStatus = NotebookOffline []
-                        , notebookId = notebookId
-                        , notes = Dict.empty
-                        , clipboardState = ClipboardButton.initClipboardState
-                        }
-                    , Cmd.none
-                    )
+                    openExistingNotebookOffline notebookId
 
 
 updateNotebookNotStored : AppMsg -> LoadedModel -> ( LoadedModel, Cmd AppMsg )
@@ -387,6 +364,39 @@ delegateToClipboardButton clipboardMsg ({ notebookId, clipboardState } as model)
     in
     ( { model | clipboardState = newClipboardState }
     , Cmd.map ClipboardMsgContainer clipboardCmd
+    )
+
+
+openExistingNotebookOnline : List Note -> NotebookId -> Int -> ( Model, Cmd Msg )
+openExistingNotebookOnline notes notebookId smallestAvailableId =
+    let
+        dictFromNotes : List Note -> Notes
+        dictFromNotes noteList =
+            noteList
+                |> List.map noteToPair
+                |> Dict.fromList
+    in
+    ( OpenNotebook
+        { smallestAvailableId = smallestAvailableId
+        , connectionStatus = NotebookOnline
+        , notebookId = notebookId
+        , notes = dictFromNotes notes
+        , clipboardState = ClipboardButton.initClipboardState
+        }
+    , Cmd.none
+    )
+
+
+openExistingNotebookOffline : NotebookId -> ( Model, Cmd Msg )
+openExistingNotebookOffline notebookId =
+    ( OpenNotebook
+        { smallestAvailableId = initialClientId
+        , connectionStatus = NotebookOffline []
+        , notebookId = notebookId
+        , notes = Dict.empty
+        , clipboardState = ClipboardButton.initClipboardState
+        }
+    , Cmd.none
     )
 
 
