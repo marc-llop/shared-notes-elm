@@ -1,4 +1,4 @@
-module Identifiers exposing (NotebookId, fetchTwoWords, notebookIdFromWords, notebookIdToString, parseNotebookId, wordGenerator)
+module Identifiers exposing (NotebookId, fetchTwoWords, fullyRandomNotebookId, notebookIdFromWords, notebookIdToString, parseNotebookId, randomNotebookIdWithWords, wordGenerator)
 
 import Http
 import Json.Decode as Decode exposing (Decoder)
@@ -19,6 +19,32 @@ type NotebookId
 notebookIdFromWords : String -> String -> String -> NotebookId
 notebookIdFromWords a b c =
     NotebookId <| String.join "-" [ a, b, c ]
+
+
+{-| Returns a NotebookId made with the supplied two words and a randomly
+generated one.
+-}
+randomNotebookIdWithWords : ( String, String ) -> Random.Seed -> ( Random.Seed, NotebookId )
+randomNotebookIdWithWords ( a, b ) seed =
+    let
+        ( c, newSeed ) =
+            Random.step wordGenerator seed
+    in
+    ( newSeed, notebookIdFromWords a b c )
+
+
+{-| Returns a NotebookId made from three randomly generated words.
+-}
+fullyRandomNotebookId : Random.Seed -> ( Random.Seed, NotebookId )
+fullyRandomNotebookId seed =
+    let
+        ( a, seed1 ) =
+            Random.step wordGenerator seed
+
+        ( b, seed2 ) =
+            Random.step wordGenerator seed1
+    in
+    randomNotebookIdWithWords ( a, b ) seed2
 
 
 {-| Prints the NotebookId as a string that is safe for URLs and safe for

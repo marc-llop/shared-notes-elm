@@ -207,7 +207,7 @@ updateOpeningNotebook randomSeed msg model =
 
                 networkFailed : ( Model, Cmd Msg )
                 networkFailed =
-                    fullyRandomNotebookId randomSeed
+                    Identifiers.fullyRandomNotebookId randomSeed
                         |> Tuple.second
                         |> openNewNotebookOffline
             in
@@ -226,12 +226,12 @@ updateOpeningNotebook randomSeed msg model =
         WordsFetched result ->
             case result of
                 Ok ( a, b ) ->
-                    randomNotebookIdWithWords ( a, b ) randomSeed
+                    Identifiers.randomNotebookIdWithWords ( a, b ) randomSeed
                         |> Tuple.second
                         |> openNewNotebookOnline
 
                 Err _ ->
-                    fullyRandomNotebookId randomSeed
+                    Identifiers.fullyRandomNotebookId randomSeed
                         |> Tuple.second
                         |> openNewNotebookOnline
 
@@ -423,32 +423,6 @@ openNewNotebookOffline notebookId =
         }
     , Cmd.none
     )
-
-
-{-| Returns a NotebookId made with the supplied two words and a randomly
-generated one.
--}
-randomNotebookIdWithWords : ( String, String ) -> Random.Seed -> ( Random.Seed, NotebookId )
-randomNotebookIdWithWords ( a, b ) seed =
-    let
-        ( c, newSeed ) =
-            Random.step Identifiers.wordGenerator seed
-    in
-    ( newSeed, Identifiers.notebookIdFromWords a b c )
-
-
-{-| Returns a NotebookId made from three randomly generated words.
--}
-fullyRandomNotebookId : Random.Seed -> ( Random.Seed, NotebookId )
-fullyRandomNotebookId seed =
-    let
-        ( a, seed1 ) =
-            Random.step Identifiers.wordGenerator seed
-
-        ( b, seed2 ) =
-            Random.step Identifiers.wordGenerator seed1
-    in
-    randomNotebookIdWithWords ( a, b ) seed2
 
 
 syncNotes : () -> Cmd AppMsg
