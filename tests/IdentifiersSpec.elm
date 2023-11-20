@@ -2,13 +2,13 @@ module IdentifiersSpec exposing (suite)
 
 import Expect
 import Fuzz
-import Identifiers exposing (notebookIdToString, parseNotebookId, wordGenerator)
+import Identifiers exposing (ValidWord, notebookIdToString, parseNotebookId, validWordContent, wordGenerator)
 import Random
 import Test exposing (Test)
 import Tuple
 
 
-generateWord : Int -> String
+generateWord : Int -> ValidWord
 generateWord seed =
     Random.initialSeed seed
         |> Random.step wordGenerator
@@ -22,11 +22,13 @@ suite =
             [ Test.fuzz Fuzz.int "Generated Id should have five characters" <|
                 \fuzz ->
                     generateWord fuzz
+                        |> validWordContent
                         |> String.length
                         |> Expect.equal 5
             , Test.fuzz Fuzz.int "All characters should be alphanumeric" <|
                 \fuzz ->
                     generateWord fuzz
+                        |> validWordContent
                         |> (\word -> ( word, String.toList word ))
                         |> (\( word, chars ) ->
                                 List.foldl

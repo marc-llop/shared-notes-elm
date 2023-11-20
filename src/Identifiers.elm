@@ -1,4 +1,4 @@
-module Identifiers exposing (NotebookId, fetchTwoWords, fullyRandomNotebookId, notebookIdFromWords, notebookIdToString, parseNotebookId, randomNotebookIdWithWords, wordGenerator)
+module Identifiers exposing (NotebookId, ValidWord, fetchTwoWords, fullyRandomNotebookId, notebookIdFromWords, notebookIdToString, parseNotebookId, randomNotebookIdWithWords, validWordContent, wordGenerator)
 
 import Http
 import Json.Decode as Decode exposing (Decoder)
@@ -16,15 +16,28 @@ type NotebookId
     = NotebookId String
 
 
-notebookIdFromWords : String -> String -> String -> NotebookId
-notebookIdFromWords a b c =
+notebookIdFromWords : ValidWord -> ValidWord -> ValidWord -> NotebookId
+notebookIdFromWords (ValidWord a) (ValidWord b) (ValidWord c) =
     NotebookId <| String.join "-" [ a, b, c ]
+
+
+{-| Opaque type used to make sure NotebookIds are created with words that were fetched using this module.
+-}
+type ValidWord
+    = ValidWord String
+
+
+{-| Returns the content of a ValidWord. Useful for testing.
+-}
+validWordContent : ValidWord -> String
+validWordContent (ValidWord s) =
+    s
 
 
 {-| Returns a NotebookId made with the supplied two words and a randomly
 generated one.
 -}
-randomNotebookIdWithWords : ( String, String ) -> Random.Seed -> ( Random.Seed, NotebookId )
+randomNotebookIdWithWords : ( ValidWord, ValidWord ) -> Random.Seed -> ( Random.Seed, NotebookId )
 randomNotebookIdWithWords ( a, b ) seed =
     let
         ( c, newSeed ) =
@@ -103,14 +116,14 @@ parseNotebookId str =
         Err ("Tried to create an invalid notebookId: " ++ str)
 
 
-wordsDecoder : Decoder ( String, String )
+wordsDecoder : Decoder ( ValidWord, ValidWord )
 wordsDecoder =
     Decode.list Decode.string
         |> Decode.andThen
             (\words ->
                 case words of
                     x :: y :: _ ->
-                        Decode.succeed ( x, y )
+                        Decode.succeed ( ValidWord x, ValidWord y )
 
                     _ ->
                         Decode.fail "Expected two words from random-word-api but received less."
@@ -119,7 +132,7 @@ wordsDecoder =
 
 {-| Requests two 5-character words chosen randomly from a dictionary to a remote API.
 -}
-fetchTwoWords : (Result Http.Error ( String, String ) -> msg) -> Cmd msg
+fetchTwoWords : (Result Http.Error ( ValidWord, ValidWord ) -> msg) -> Cmd msg
 fetchTwoWords toMsg =
     Http.get
         { url = "https://random-word-api.herokuapp.com/word?number=2&length=" ++ String.fromInt idWordLength
@@ -136,9 +149,10 @@ fetchTwoWords toMsg =
     -- "on3ym"
 
 -}
-wordGenerator : Generator String
+wordGenerator : Generator ValidWord
 wordGenerator =
     Random.String.string idWordLength alphanumericGenerator
+        |> Random.map ValidWord
 
 
 alphanumericGenerator : Generator Char

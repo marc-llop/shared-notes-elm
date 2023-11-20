@@ -11,7 +11,7 @@ import Html.Styled.Attributes as Attributes exposing (attribute, class)
 import Html.Styled.Keyed as Keyed
 import Http
 import Icons
-import Identifiers exposing (NotebookId)
+import Identifiers exposing (NotebookId, ValidWord)
 import Note exposing (Note, noteIdString, noteToPair, noteView)
 import Notebook exposing (insertNotebook)
 import Random
@@ -140,7 +140,7 @@ init { path, randomSeed } =
 -}
 type InitializationMsg
     = NotebookChecked (Result CallError NotebookId)
-    | WordsFetched (Result Http.Error ( String, String ))
+    | WordsFetched (Result Http.Error ( ValidWord, ValidWord ))
     | NotebookFetched NotebookId (Result CallError ( List Note, Int ))
 
 
